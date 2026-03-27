@@ -1,17 +1,19 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+let _supabase: SupabaseClient | null = null;
 
-// Check for valid URL format before initializing
-const isConfigured = !!supabaseUrl && supabaseUrl.startsWith('http');
+export function getSupabase(): SupabaseClient {
+  if (_supabase) return _supabase;
 
-if (!isConfigured && process.env.NODE_ENV === 'production') {
-  console.warn('⚠️ Supabase URL is not configured. Redirecting to placeholder mode.');
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Missing Supabase environment variables. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+    );
+  }
+
+  _supabase = createClient(supabaseUrl, supabaseAnonKey);
+  return _supabase;
 }
-
-// Export the client. If not configured, it will use a dummy URL that won't crash the build.
-export const supabase = createClient(
-  isConfigured ? supabaseUrl : 'https://your-project.supabase.co',
-  supabaseAnonKey || 'your-anon-key'
-);

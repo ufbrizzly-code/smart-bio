@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 import { LinkTree } from '@/components/LinkTree';
 import { Profile, Link } from '@/lib/types';
 
@@ -17,6 +17,9 @@ export default async function UsernamePage({ params }: PageProps) {
   
   // Clean up username (remove @ if present)
   const cleanUsername = username.replace('@', '').toLowerCase();
+
+
+  const supabase = getSupabase();
 
   // 1. Fetch Profile
   const { data: profile, error: profileError } = await supabase
