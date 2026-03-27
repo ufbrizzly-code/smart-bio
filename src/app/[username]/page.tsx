@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { LinkTree } from '@/components/LinkTree';
 import { Profile, Link } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   params: Promise<{ username: string }>;
 }
