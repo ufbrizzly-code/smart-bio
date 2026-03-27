@@ -9,9 +9,14 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     full_name TEXT,
     bio TEXT,
     avatar_url TEXT,
-    theme_id UUID,
+    theme TEXT DEFAULT 'minimal',
+    button_style TEXT DEFAULT 'rounded',
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Migration for existing databases (safe to run even if columns exist)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS theme TEXT DEFAULT 'minimal';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS button_style TEXT DEFAULT 'rounded';
 
 -- Themes (Styles for the bio page)
 CREATE TABLE IF NOT EXISTS public.themes (
@@ -71,11 +76,22 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
 -- This function automatically creates a profile when a user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  base_username TEXT;
+  final_username TEXT;
 BEGIN
+  base_username := LOWER(SPLIT_PART(new.email, '@', 1));
+  final_username := base_username;
+  
+  -- If username exists, append a random string
+  WHILE EXISTS (SELECT 1 FROM public.profiles WHERE username = final_username) LOOP
+    final_username := base_username || floor(random() * 10000)::text;
+  END LOOP;
+
   INSERT INTO public.profiles (id, username, full_name, avatar_url)
   VALUES (
     new.id, 
-    LOWER(SPLIT_PART(new.email, '@', 1)), -- Default username to first part of email
+    final_username,
     new.raw_user_meta_data->>'full_name',
     new.raw_user_meta_data->>'avatar_url'
   );
@@ -118,3 +134,21 @@ CREATE POLICY "Users can maintain their own link rules" ON public.link_rules FOR
 -- Analytics: Anyone can insert (to track clicks), only owner can view
 CREATE POLICY "Anyone can record clicks (insert only)" ON public.analytics FOR INSERT WITH CHECK (true);
 CREATE POLICY "Users can view their own link performance" ON public.analytics FOR SELECT USING (profile_id = auth.uid());
+
+-- ##################################################################
+-- 4. RPC FUNCTIONS
+-- ##################################################################
+
+-- Function to count unique visitors based on profile_id
+CREATE OR REPLACE FUNCTION public.get_unique_visitors_count(pid UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  visitor_count INTEGER;
+BEGIN
+  SELECT COUNT(DISTINCT user_agent) INTO visitor_count
+  FROM public.analytics
+  WHERE profile_id = pid;
+  
+  RETURN visitor_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

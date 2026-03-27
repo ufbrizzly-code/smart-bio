@@ -12,7 +12,7 @@ export default function Home() {
   const handleClaim = (e: React.FormEvent) => {
     e.preventDefault();
     if (username.trim()) {
-      router.push(`/${username.toLowerCase()}`);
+      router.push(`/login?username=${username.toLowerCase()}`);
     }
   };
 
