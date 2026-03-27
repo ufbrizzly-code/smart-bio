@@ -1,102 +1,285 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Users, MousePointer2, Plus, Settings } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, Reorder, AnimatePresence } from 'framer-motion';
+import { 
+  Plus, GripVertical, Trash2, ExternalLink, ToggleLeft, ToggleRight, 
+  Clock, MousePointer2, Globe, ChevronDown, ChevronUp, Pencil, X, Check 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function Dashboard() {
-  const stats = [
-    { label: 'Total Clicks', value: '1,284', icon: <MousePointer2 className="text-blue-500" />, trend: '+12.5%' },
-    { label: 'Unique Visitors', value: '852', icon: <Users className="text-purple-500" />, trend: '+5.2%' },
-    { label: 'Conversion Rate', value: '3.4%', icon: <TrendingUp className="text-emerald-500" />, trend: '+0.8%' },
-  ];
+interface LinkItem {
+  id: string;
+  title: string;
+  url: string;
+  is_visible: boolean;
+  clicks: number;
+  rules: SmartRule[];
+}
+
+interface SmartRule {
+  type: 'time_based' | 'click_limit' | 'location_based';
+  config: Record<string, string | number | string[]>;
+  is_active: boolean;
+}
+
+const DEMO_LINKS: LinkItem[] = [
+  { id: '1', title: '🎵 My Latest Track on Spotify', url: 'https://spotify.com', is_visible: true, clicks: 342, rules: [] },
+  { id: '2', title: '🛒 Exclusive Merch Store', url: 'https://store.example.com', is_visible: true, clicks: 218, rules: [] },
+  { id: '3', title: '📸 Follow me on Instagram', url: 'https://instagram.com/me', is_visible: true, clicks: 156, rules: [] },
+  { id: '4', title: '🇸🇪 Swedish Summer Offer', url: 'https://offer.example.com', is_visible: true, clicks: 89, rules: [
+    { type: 'click_limit', config: { max_clicks: 500 }, is_active: true }
+  ]},
+];
+
+export default function DashboardLinksPage() {
+  const [links, setLinks] = useState<LinkItem[]>(DEMO_LINKS);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showNewLink, setShowNewLink] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newUrl, setNewUrl] = useState('');
+
+  const toggleVisibility = (id: string) => {
+    setLinks(links.map(l => l.id === id ? { ...l, is_visible: !l.is_visible } : l));
+  };
+
+  const deleteLink = (id: string) => {
+    setLinks(links.filter(l => l.id !== id));
+  };
+
+  const addLink = () => {
+    if (!newTitle.trim() || !newUrl.trim()) return;
+    const newLink: LinkItem = {
+      id: Date.now().toString(),
+      title: newTitle,
+      url: newUrl.startsWith('http') ? newUrl : `https://${newUrl}`,
+      is_visible: true,
+      clicks: 0,
+      rules: [],
+    };
+    setLinks([newLink, ...links]);
+    setNewTitle('');
+    setNewUrl('');
+    setShowNewLink(false);
+  };
 
   return (
-    <div className="min-h-screen bg-background p-8 lg:p-12">
-      <div className="glow-bg" />
-      
-      {/* Dashboard Header */}
-      <header className="max-w-7xl mx-auto flex justify-between items-end mb-12">
+    <div>
+      {/* Header */}
+      <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Your Performance</h1>
-          <p className="text-foreground/50 mt-1">Real-time insights for your smart-bio.link.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Your Links</h1>
+          <p className="text-foreground/50 mt-1 text-sm">Drag to reorder. Click to edit. Toggle to show/hide.</p>
         </div>
-        <button className="h-11 px-6 bg-accent text-background rounded-full font-semibold flex items-center space-x-2 hover:opacity-90 active:scale-95 transition-all">
-          <Plus size={18} />
-          <span>Add New Link</span>
+        <button
+          onClick={() => setShowNewLink(true)}
+          className="h-10 px-5 bg-accent text-background rounded-xl font-semibold flex items-center gap-2 hover:opacity-90 active:scale-[0.97] transition-all text-sm"
+        >
+          <Plus size={16} />
+          Add Link
         </button>
-      </header>
+      </div>
 
-      {/* Stats Grid */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        {stats.map((stat, i) => (
-          <motion.div 
-            key={stat.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="glass p-6 rounded-3xl"
+      {/* New Link Form */}
+      <AnimatePresence>
+        {showNewLink && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 overflow-hidden"
           >
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 bg-accent/5 rounded-2xl">
-                {stat.icon}
+            <div className="glass rounded-2xl p-5 space-y-3">
+              <input
+                type="text"
+                placeholder="Link title (e.g. My YouTube Channel)"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                className="w-full h-11 px-4 bg-accent/5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+                autoFocus
+              />
+              <input
+                type="text"
+                placeholder="URL (e.g. https://youtube.com/@you)"
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+                className="w-full h-11 px-4 bg-accent/5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+                onKeyDown={(e) => e.key === 'Enter' && addLink()}
+              />
+              <div className="flex gap-2">
+                <button onClick={addLink} className="h-9 px-4 bg-accent text-background rounded-lg font-semibold text-sm flex items-center gap-1 hover:opacity-90">
+                  <Check size={14} /> Add
+                </button>
+                <button onClick={() => setShowNewLink(false)} className="h-9 px-4 glass rounded-lg font-semibold text-sm flex items-center gap-1 hover:bg-accent/5">
+                  <X size={14} /> Cancel
+                </button>
               </div>
-              <span className="text-xs font-bold text-emerald-500">{stat.trend}</span>
             </div>
-            <p className="text-sm font-medium text-foreground/50">{stat.label}</p>
-            <h3 className="text-3xl font-bold mt-1 tracking-tight">{stat.value}</h3>
           </motion.div>
-        ))}
-      </div>
+        )}
+      </AnimatePresence>
 
-      {/* Recent Activity / Most Clicked */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="glass p-8 rounded-3xl">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <BarChart3 size={20} />
-              Most Clicked Links
-            </h2>
-          </div>
-          <div className="space-y-4">
-            <LinkStatItem title="Follow on Twitter" clicks={482} percent={45} />
-            <LinkStatItem title="My New Album (Spotify)" clicks={290} percent={28} />
-            <LinkStatItem title="Exclusive Merch (Store)" clicks={185} percent={18} />
-            <LinkStatItem title="Sweden Summer Offer" clicks={127} percent={9} />
-          </div>
-        </div>
+      {/* Links List */}
+      <Reorder.Group axis="y" values={links} onReorder={setLinks} className="space-y-3">
+        <AnimatePresence>
+          {links.map((link) => (
+            <Reorder.Item
+              key={link.id}
+              value={link}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, x: -100 }}
+              className="relative"
+            >
+              <div className={cn(
+                "glass rounded-2xl overflow-hidden transition-all",
+                !link.is_visible && "opacity-50"
+              )}>
+                {/* Main Row */}
+                <div className="flex items-center gap-3 px-4 py-4">
+                  {/* Drag Handle */}
+                  <div className="cursor-grab active:cursor-grabbing text-foreground/20 hover:text-foreground/50 transition-colors">
+                    <GripVertical size={18} />
+                  </div>
 
-        <div className="glass p-8 rounded-3xl flex flex-col justify-center items-center text-center">
-          <div className="w-16 h-16 bg-accent/5 rounded-3xl flex items-center justify-center text-accent mb-6 animate-pulse">
-            <Settings size={32} />
-          </div>
-          <h3 className="text-xl font-bold mb-2">Smart Rules Active</h3>
-          <p className="text-foreground/50 max-w-xs mb-6">
-            Your "Sweden Summer Offer" is currently showing only to visitors from Sweden and will hide after 500 clicks.
-          </p>
-          <button className="text-sm font-semibold hover:underline">Manage Rules →</button>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    {editingId === link.id ? (
+                      <input
+                        type="text"
+                        value={link.title}
+                        onChange={(e) => setLinks(links.map(l => l.id === link.id ? { ...l, title: e.target.value } : l))}
+                        onBlur={() => setEditingId(null)}
+                        onKeyDown={(e) => e.key === 'Enter' && setEditingId(null)}
+                        className="w-full bg-transparent font-semibold text-sm focus:outline-none border-b-2 border-accent pb-0.5"
+                        autoFocus
+                      />
+                    ) : (
+                      <p 
+                        className="font-semibold text-sm truncate cursor-pointer hover:text-accent transition-colors"
+                        onClick={() => setEditingId(link.id)}
+                      >
+                        {link.title}
+                      </p>
+                    )}
+                    <p className="text-xs text-foreground/40 truncate mt-0.5">{link.url}</p>
+                  </div>
+
+                  {/* Click Count */}
+                  <div className="text-xs text-foreground/40 font-medium flex items-center gap-1 px-2">
+                    <MousePointer2 size={12} />
+                    {link.clicks}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setExpandedId(expandedId === link.id ? null : link.id)}
+                      className="p-2 hover:bg-accent/5 rounded-lg transition-colors text-foreground/40 hover:text-foreground"
+                    >
+                      {expandedId === link.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                    <button
+                      onClick={() => toggleVisibility(link.id)}
+                      className="p-2 hover:bg-accent/5 rounded-lg transition-colors"
+                    >
+                      {link.is_visible 
+                        ? <ToggleRight size={20} className="text-emerald-500" />
+                        : <ToggleLeft size={20} className="text-foreground/30" />
+                      }
+                    </button>
+                    <button
+                      onClick={() => deleteLink(link.id)}
+                      className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors text-foreground/30 hover:text-red-500"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Section - Smart Rules */}
+                <AnimatePresence>
+                  {expandedId === link.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-5 pb-5 pt-2 border-t border-glass-border space-y-3">
+                        <p className="text-xs font-bold uppercase tracking-wider text-foreground/40">Smart Rules</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <SmartRuleCard
+                            icon={<Clock size={16} />}
+                            title="Time-Based"
+                            description="Show only at certain hours"
+                            active={link.rules.some(r => r.type === 'time_based' && r.is_active)}
+                          />
+                          <SmartRuleCard
+                            icon={<MousePointer2 size={16} />}
+                            title="Click Limit"
+                            description="Hide after X clicks"
+                            active={link.rules.some(r => r.type === 'click_limit' && r.is_active)}
+                          />
+                          <SmartRuleCard
+                            icon={<Globe size={16} />}
+                            title="Location"
+                            description="Show by country"
+                            active={link.rules.some(r => r.type === 'location_based' && r.is_active)}
+                          />
+                        </div>
+
+                        {/* URL Editor */}
+                        <div className="space-y-1.5 pt-2">
+                          <label className="text-xs font-bold uppercase tracking-wider text-foreground/40">URL</label>
+                          <input
+                            type="text"
+                            value={link.url}
+                            onChange={(e) => setLinks(links.map(l => l.id === link.id ? { ...l, url: e.target.value } : l))}
+                            className="w-full h-10 px-4 bg-accent/5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </Reorder.Item>
+          ))}
+        </AnimatePresence>
+      </Reorder.Group>
+
+      {links.length === 0 && (
+        <div className="text-center py-20">
+          <p className="text-foreground/40 text-sm">No links yet. Click &quot;Add Link&quot; to get started!</p>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-function LinkStatItem({ title, clicks, percent }: { title: string, clicks: number, percent: number }) {
+function SmartRuleCard({ icon, title, description, active }: { 
+  icon: React.ReactNode; title: string; description: string; active: boolean 
+}) {
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between text-sm font-medium">
-        <span>{title}</span>
-        <span className="text-foreground/50">{clicks} clicks</span>
+    <button className={cn(
+      "flex items-start gap-3 p-3 rounded-xl border text-left transition-all hover:scale-[1.02]",
+      active 
+        ? "border-accent/30 bg-accent/5" 
+        : "border-glass-border hover:border-accent/20"
+    )}>
+      <div className={cn(
+        "mt-0.5 transition-colors",
+        active ? "text-accent" : "text-foreground/30"
+      )}>
+        {icon}
       </div>
-      <div className="w-full h-2 bg-accent/5 rounded-full overflow-hidden">
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${percent}%` }}
-          transition={{ duration: 1, delay: 0.5 }}
-          className="h-full bg-accent rounded-full"
-        />
+      <div>
+        <p className="text-xs font-bold">{title}</p>
+        <p className="text-[11px] text-foreground/40 mt-0.5">{description}</p>
       </div>
-    </div>
+    </button>
   );
 }
