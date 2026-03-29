@@ -3,164 +3,151 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  BarChart3, TrendingUp, Users, MousePointer2, Globe, Calendar, ArrowUpRight, ArrowDownRight, Loader2
+  BarChart3, MousePointer2, TrendingUp, Calendar, Loader2, 
+  ArrowUpRight, ArrowDownRight, Activity, Globe, Zap, Clock 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabase } from '@/lib/supabase';
-
-type TimeRange = '7d' | '30d' | '90d';
+import { useProfile } from '@/lib/profile-context';
 
 export default function AnalyticsPage() {
-  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<any[]>([]);
-  const [topLinks, setTopLinks] = useState<any[]>([]);
-  const [topCountries, setTopCountries] = useState<any[]>([]);
-  const [dailyData, setDailyData] = useState<any[]>([]);
+  const { profile, links } = useProfile();
   const supabase = getSupabase();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    today: 0,
+    conversion: 0
+  });
+  const [clickMap, setClickMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    fetchStats();
-  }, [timeRange]);
-
-  const fetchStats = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Fetch Total Clicks
-    const { count: totalClicks } = await supabase
-      .from('analytics')
-      .select('*', { count: 'exact', head: true })
-      .eq('profile_id', user.id);
-
-    // Fetch Unique Visitors (Estimated)
-    const { data: uniqueVisitors } = await supabase
-      .rpc('get_unique_visitors_count', { pid: user.id });
-
-    // Fetch Top Links
-    const { data: linksData } = await supabase
-      .from('links')
-      .select('title, id')
-      .eq('profile_id', user.id);
-
-    // Fetch Analytics for Top Links
-    const topLinksResults = await Promise.all((linksData || []).map(async (link: any) => {
-      const { count } = await supabase
+    if (!profile) return;
+    const fetchRealData = async () => {
+      // 1. Fetch total clicks from analytics table
+      const { data: allAnalytics, error: err1 } = await supabase
         .from('analytics')
-        .select('*', { count: 'exact', head: true })
-        .eq('link_id', link.id);
-      return { title: link.title, clicks: count || 0 };
-    }));
+        .select('created_at, link_id')
+        .eq('profile_id', profile.id);
 
-    setTopLinks(topLinksResults.sort((a, b) => b.clicks - a.clicks).slice(0, 5));
+      if (err1) {
+         setLoading(false);
+         return;
+      }
 
-    // Mock some data if empty to keep the UI looking good
-    setStats([
-      { label: 'Total Clicks', value: totalClicks || 0, change: '+12.5%', icon: MousePointer2, color: 'text-blue-500' },
-      { label: 'Unique Visitors', value: uniqueVisitors || 0, change: '+5.2%', icon: Users, color: 'text-purple-500' },
-      { label: 'Conversion Rate', value: '3.4%', change: '+0.8%', icon: TrendingUp, color: 'text-emerald-500' },
-      { label: 'Countries', value: '4', change: '+1', icon: Globe, color: 'text-orange-500' },
-    ]);
+      const total = allAnalytics?.length || 0;
+      
+      // 2. Fetch today's clicks
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayClicks = allAnalytics?.filter(a => new Date(a.created_at) >= todayStart).length || 0;
 
-    // Daily Data Mock (since we don't have many real clicks yet)
-    setDailyData([
-      { day: 'Mon', clicks: 12 }, { day: 'Tue', clicks: 18 }, { day: 'Wed', clicks: 25 },
-      { day: 'Thu', clicks: 42 }, { day: 'Fri', clicks: 31 }, { day: 'Sat', clicks: 15 }, { day: 'Sun', clicks: 8 }
-    ]);
-    
-    setTopCountries([
-      { name: 'Sweden', flag: '🇸🇪', clicks: 45, percent: 32 },
-      { name: 'USA', flag: '🇺🇸', clicks: 28, percent: 21 },
-      { name: 'Germany', flag: '🇩🇪', clicks: 12, percent: 8 }
-    ]);
+      // 3. Map clicks per link
+      const map: Record<string, number> = {};
+      allAnalytics?.forEach(a => {
+        map[a.link_id] = (map[a.link_id] || 0) + 1;
+      });
 
-    setLoading(false);
-  };
+      setClickMap(map);
+      setStats({
+        total,
+        today: todayClicks,
+        conversion: total > 0 ? 100 : 0 // Simplified for now
+      });
+      setLoading(false);
+    };
+    fetchRealData();
+  }, [profile, supabase]);
 
-  const maxClicks = Math.max(...dailyData.map(d => d.clicks));
+  if (!profile || loading) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="animate-spin text-purple-400" size={28} />
+    </div>
+  );
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <Loader2 className="animate-spin text-accent" size={32} />
-        <p className="mt-4 text-xs font-bold text-foreground/40 uppercase tracking-widest">Gathering insights...</p>
-      </div>
-    );
-  }
+  const maxClicks = Math.max(...Object.values(clickMap), 1) || 1;
 
   return (
-    <div>
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-foreground/50 mt-1 text-sm">Real data tracking for your SmartBio Link.</p>
-        </div>
-        
-        <div className="glass rounded-xl p-1 flex gap-0.5">
-          {(['7d', '30d', '90d'] as TimeRange[]).map((range) => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
-                timeRange === range ? "bg-accent text-background" : "text-foreground/50 hover:text-foreground"
-              )}
-            >
-              {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
-            </button>
-          ))}
-        </div>
+    <div className="space-y-10 pb-20">
+      <div>
+        <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+           <BarChart3 className="text-purple-400" size={24} />
+           Real-Time Analytics
+        </h1>
+        <p className="text-sm text-white/40 mt-1">Direct statistics from your live bio page</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat, i) => (
-          <motion.div key={stat.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="glass rounded-2xl p-5 shadow-sm">
-            <div className="flex justify-between items-start mb-3">
-              <div className={cn("p-2.5 bg-accent/5 rounded-xl", stat.color)}><stat.icon size={18} /></div>
-              <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-0.5"><ArrowUpRight size={12} /> {stat.change}</span>
-            </div>
-            <p className="text-[11px] font-semibold text-foreground/40 uppercase tracking-wider">{stat.label}</p>
-            <h3 className="text-2xl font-bold mt-0.5 tracking-tight">{stat.value}</h3>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 glass rounded-2xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-sm font-bold flex items-center gap-2"><BarChart3 size={16} /> Daily Clicks</h2>
-            <div className="flex items-center gap-1.5 text-xs text-foreground/40"><Calendar size={12} /> Last 7 days</div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-6 rounded-[32px] border border-white/[0.08] bg-[#0f1020]/40 relative overflow-hidden group">
+             <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400">
+                   <MousePointer2 size={18} />
+                </div>
+                <div className="text-[10px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">LIVE</div>
+             </div>
+             <p className="text-[11px] font-bold text-white/20 uppercase tracking-widest">Total Clicks</p>
+             <h3 className="text-3xl font-bold">{stats.total.toLocaleString()}</h3>
           </div>
-          <div className="flex items-end gap-3 h-48">
-            {dailyData.map((day, i) => (
-              <div key={day.day} className="flex-1 flex flex-col items-center gap-2">
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${(day.clicks / maxClicks) * 100}%` }}
-                  transition={{ duration: 0.8, delay: i * 0.1 }}
-                  className="w-full bg-accent/80 rounded-t-lg relative group cursor-pointer hover:bg-accent transition-colors"
-                />
-                <span className="text-[11px] font-semibold text-foreground/40">{day.day}</span>
+
+          <div className="p-6 rounded-[32px] border border-white/[0.08] bg-[#0f1020]/40 relative overflow-hidden group">
+             <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                   <Activity size={18} />
+                </div>
+             </div>
+             <p className="text-[11px] font-bold text-white/20 uppercase tracking-widest">Clicks Today</p>
+             <h3 className="text-3xl font-bold">{stats.today.toLocaleString()}</h3>
+          </div>
+
+          <div className="p-6 rounded-[32px] border border-white/[0.08] bg-[#0f1020]/40 relative overflow-hidden group text-white/40 grayscale">
+             <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                   <TrendingUp size={18} />
+                </div>
+             </div>
+             <p className="text-[11px] font-bold uppercase tracking-widest">Growth Rate</p>
+             <h3 className="text-3xl font-bold">-- %</h3>
+          </div>
+      </div>
+
+      <section className="space-y-6">
+         <h2 className="text-lg font-bold text-white pl-2">Individual Link Performance</h2>
+
+         <div className="rounded-[32px] border border-white/[0.08] bg-[#0f1020]/40 overflow-hidden">
+            {links.length === 0 ? (
+              <div className="p-20 text-center text-white/20 font-bold uppercase tracking-widest text-[10px]">No link data</div>
+            ) : (
+              <div className="divide-y divide-white/[0.04]">
+                {links.map((link, i) => {
+                  const clicks = clickMap[link.id] || 0;
+                  const percent = (clicks / maxClicks) * 100;
+                  return (
+                    <div key={link.id} className="p-6 hover:bg-white/[0.02] transition-colors">
+                       <div className="flex items-center justify-between mb-4">
+                          <div>
+                             <p className="text-[14px] font-bold text-white">{link.title.replace('[SHOP] ', '🛍️ ')}</p>
+                             <p className="text-[10px] text-white/20 font-mono mt-1">{link.url.split('||')[0]}</p>
+                          </div>
+                          <div className="text-right">
+                             <p className="text-lg font-bold text-white">{clicks}</p>
+                             <p className="text-[9px] font-bold text-white/20 uppercase">Clicks</p>
+                          </div>
+                       </div>
+                       <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${percent}%` }}
+                            transition={{ duration: 1 }}
+                            className="h-full bg-gradient-to-r from-indigo-500 to-purple-600"
+                          />
+                       </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="lg:col-span-2 glass rounded-2xl p-6">
-          <h2 className="text-sm font-bold mb-5 flex items-center gap-2"><TrendingUp size={16} /> Top Performing</h2>
-          <div className="space-y-4 text-sm font-medium">
-            {topLinks.map((link, i) => (
-              <motion.div key={link.title} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-foreground/20 w-5">{i + 1}</span>
-                <div className="flex-1 truncate">{link.title}</div>
-                <span className="text-xs font-bold text-foreground/40">{link.clicks} clicks</span>
-              </motion.div>
-            ))}
-            {topLinks.length === 0 && <p className="text-xs text-foreground/20 py-10 text-center">No clicks recorded yet.</p>}
-          </div>
-        </div>
-      </div>
+            )}
+         </div>
+      </section>
     </div>
   );
 }

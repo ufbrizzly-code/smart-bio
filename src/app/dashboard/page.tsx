@@ -1,242 +1,216 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { motion, Reorder, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, Trash2, ToggleLeft, ToggleRight, X, Check, Loader2, ExternalLink, Pencil } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  User, Check, Loader2, Save, AtSign, Globe, Sparkles, 
+  Trash2, Upload, Camera, PenTool, Terminal, Shield
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabase } from '@/lib/supabase';
 import { useProfile } from '@/lib/profile-context';
+import { Profile } from '@/lib/types';
 
-export default function DashboardLinksPage() {
-  const { links, setLinks, loading, profile } = useProfile();
-  const [showNewLink, setShowNewLink] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newUrl, setNewUrl] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editUrl, setEditUrl] = useState('');
+export default function ProfilePage() {
+  const { profile, setProfile, refreshProfile } = useProfile();
   const supabase = getSupabase();
+  const avatarRef = useRef<HTMLInputElement>(null);
 
-  const toggleVisibility = async (id: string, cur: boolean) => {
-    setLinks(prev => prev.map(l => l.id === id ? { ...l, is_visible: !cur } : l));
-    await supabase.from('links').update({ is_visible: !cur }).eq('id', id);
+  const [local, setLocal] = useState<Partial<Profile>>({});
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (profile && !initialized.current) {
+      initialized.current = true;
+      setLocal({
+        full_name: profile.full_name || '',
+        bio: profile.bio || '',
+      });
+    }
+  }, [profile]);
+
+  const update = (field: keyof Profile, value: any) => {
+    setLocal(prev => ({ ...prev, [field]: value }));
+    setSaved(false);
   };
 
-  const deleteLink = async (id: string) => {
-    setLinks(prev => prev.filter(l => l.id !== id));
-    await supabase.from('links').delete().eq('id', id);
-  };
-
-  const addLink = async () => {
-    if (!newTitle.trim() || !newUrl.trim() || !profile) return;
+  const handleSave = async () => {
+    if (!profile) return;
     setSaving(true);
-    const url = newUrl.startsWith('http') ? newUrl : `https://${newUrl}`;
-    const { data, error } = await supabase
-      .from('links')
-      .insert({ profile_id: profile.id, title: newTitle, url, position: links.length, is_visible: true })
-      .select().single();
-    if (data && !error) {
-      setLinks(prev => [...prev, data]);
-      setNewTitle('');
-      setNewUrl('');
-      setShowNewLink(false);
+    const { error } = await supabase.from('profiles').update(local).eq('id', profile.id);
+    if (!error) {
+      await refreshProfile();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } else {
+      alert('Error saving: ' + error.message);
     }
     setSaving(false);
   };
 
-  const startEdit = (id: string, title: string, url: string) => {
-    setEditingId(id);
-    setEditTitle(title);
-    setEditUrl(url);
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !profile) return;
+    setUploading(true);
+    const ext = file.name.split('.').pop();
+    const path = `avatars/${profile.id}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
+    if (!uploadError) {
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id);
+      await refreshProfile();
+    }
+    setUploading(false);
   };
 
-  const saveEdit = async (id: string) => {
-    if (!editTitle.trim()) return;
-    setLinks(prev => prev.map(l => l.id === id ? { ...l, title: editTitle, url: editUrl } : l));
-    await supabase.from('links').update({ title: editTitle, url: editUrl }).eq('id', id);
-    setEditingId(null);
-  };
-
-  const updateOrder = async (newLinks: typeof links) => {
-    setLinks(newLinks);
-    await Promise.all(newLinks.map((link, i) =>
-      supabase.from('links').update({ position: i }).eq('id', link.id)
-    ));
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-accent" size={28} />
-      </div>
-    );
-  }
+  if (!profile) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="animate-spin text-purple-400" size={28} />
+    </div>
+  );
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex justify-between items-end mb-8">
+    <div className="space-y-10 pb-20">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Your Links</h1>
-          <p className="text-foreground/40 mt-1 text-sm">{links.length} link{links.length !== 1 ? 's' : ''} · Drag to reorder</p>
+           <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+              <User size={24} className="text-purple-400" />
+              Public Bio
+           </h1>
+           <p className="text-sm text-white/40 mt-1">Personalize how others see your profile</p>
         </div>
         <button
-          onClick={() => { setShowNewLink(true); setNewTitle(''); setNewUrl(''); }}
-          className="h-10 px-5 bg-accent text-background rounded-xl font-bold flex items-center gap-2 hover:opacity-90 active:scale-[0.97] transition-all text-sm"
+          onClick={handleSave}
+          disabled={saving}
+          className={cn(
+            'px-8 h-11 rounded-full text-sm font-bold transition-all flex items-center gap-2 relative overflow-hidden',
+            saved ? 'bg-green-600' : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-[0_0_20px_rgba(79,70,229,0.3)] shadow-[0_4px_15px_rgba(0,0,0,0.5)]'
+          )}
         >
-          <Plus size={15} strokeWidth={2.5} />
-          Add Link
+          {saving && <Loader2 size={16} className="animate-spin" />}
+          {saved && <Check size={16} />}
+          {saved ? 'Changes Saved' : saving ? 'Updating...' : 'Save Changes'}
         </button>
       </div>
 
-      {/* New Link Form */}
-      <AnimatePresence>
-        {showNewLink && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="mb-5"
-          >
-            <div className="glass rounded-2xl p-5 space-y-3 ring-1 ring-accent/10">
-              <input
-                type="text"
-                placeholder="Title  (e.g. My YouTube Channel)"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                className="w-full h-11 px-4 bg-accent/5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
-                autoFocus
-                onKeyDown={(e) => e.key === 'Enter' && document.getElementById('url-input')?.focus()}
-              />
-              <input
-                id="url-input"
-                type="text"
-                placeholder="URL  (e.g. youtube.com/@you)"
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-                className="w-full h-11 px-4 bg-accent/5 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all"
-                onKeyDown={(e) => e.key === 'Enter' && addLink()}
-              />
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={addLink}
-                  disabled={saving || !newTitle.trim() || !newUrl.trim()}
-                  className="h-9 px-5 bg-accent text-background rounded-lg font-bold text-sm flex items-center gap-1.5 hover:opacity-90 disabled:opacity-40 transition-all"
-                >
-                  {saving ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} strokeWidth={3} />}
-                  Add
-                </button>
-                <button
-                  onClick={() => setShowNewLink(false)}
-                  className="h-9 px-4 glass rounded-lg font-semibold text-sm flex items-center gap-1.5 hover:bg-accent/5 text-foreground/50"
-                >
-                  <X size={14} /> Cancel
-                </button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Left Col: Avatar Card */}
+        <div className="lg:col-span-1 space-y-6">
+           <div className="p-8 rounded-[40px] border border-white/[0.08] bg-[#0f1020]/40 flex flex-col items-center text-center group">
+              <div className="relative mb-6">
+                 <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white/5 bg-[#1a1b2e] flex items-center justify-center shadow-2xl relative z-10 transition-transform group-hover:scale-105 duration-500">
+                    {profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-4xl font-bold text-white/20 uppercase tracking-tighter">
+                         {(profile.full_name || profile.username || '?')[0]}
+                      </span>
+                    )}
+                 </div>
+                 <div className="absolute -inset-2 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-xl rounded-full opacity-40 group-hover:opacity-80 transition-opacity" />
+                 
+                 <button
+                    onClick={() => avatarRef.current?.click()}
+                    className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-white text-black border-4 border-[#0a0a0d] flex items-center justify-center shadow-xl hover:scale-110 active:scale-90 transition-all z-20"
+                 >
+                    {uploading ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+                 </button>
+                 <input ref={avatarRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              
+              <h3 className="text-sm font-bold text-white mb-1">{(profile.full_name || profile.username)}</h3>
+              <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold font-mono">Profile Token #1042</p>
+              
+              <div className="w-full h-px bg-white/[0.04] my-6" />
+              
+              <div className="flex flex-col gap-2 w-full">
+                 <button onClick={() => avatarRef.current?.click()} className="w-full py-2.5 rounded-2xl bg-white/5 border border-white/5 text-[11px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">
+                    Upload New
+                 </button>
+                 <button className="w-full py-2.5 rounded-2xl bg-red-500/5 border border-red-500/10 text-[11px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-500 transition-colors">
+                    Purge Avatar
+                 </button>
+              </div>
+           </div>
 
-      {/* Links Reorder List */}
-      {links.length === 0 && !showNewLink ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center glass rounded-2xl">
-          <div className="w-12 h-12 bg-accent/5 rounded-2xl flex items-center justify-center mb-4">
-            <Plus size={24} className="text-foreground/20" />
-          </div>
-          <p className="font-bold text-foreground/40">No links yet</p>
-          <p className="text-sm text-foreground/20 mt-1">Click &quot;Add Link&quot; to get started</p>
+           {/* Quick Stats teaser */}
+           <div className="p-6 rounded-[32px] border border-[#a855f7]/20 bg-[#a855f7]/5 relative overflow-hidden group">
+              <Sparkles size={20} className="text-purple-400 mb-3" />
+              <h4 className="text-sm font-bold text-white mb-1">Identity Verified</h4>
+              <p className="text-[11px] text-purple-400/60 leading-relaxed uppercase tracking-tighter">
+                 Your profile is currently active and reachable globally on the VoidLink mesh.
+              </p>
+           </div>
         </div>
-      ) : (
-        <Reorder.Group axis="y" values={links} onReorder={updateOrder} className="space-y-2">
-          <AnimatePresence initial={false}>
-            {links.map((link) => (
-              <Reorder.Item key={link.id} value={link} className="list-none">
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20, height: 0 }}
-                  className={cn(
-                    "glass rounded-2xl overflow-hidden transition-opacity",
-                    !link.is_visible && "opacity-40"
-                  )}
-                >
-                  {editingId === link.id ? (
-                    /* Edit Mode */
-                    <div className="p-4 space-y-2">
-                      <input
-                        value={editTitle}
-                        onChange={e => setEditTitle(e.target.value)}
-                        className="w-full h-10 px-3 bg-accent/5 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-accent/20"
-                        autoFocus
-                      />
-                      <input
-                        value={editUrl}
-                        onChange={e => setEditUrl(e.target.value)}
-                        className="w-full h-10 px-3 bg-accent/5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20"
-                        onKeyDown={e => e.key === 'Enter' && saveEdit(link.id)}
-                      />
-                      <div className="flex gap-2">
-                        <button onClick={() => saveEdit(link.id)} className="h-8 px-4 bg-accent text-background rounded-lg text-xs font-bold flex items-center gap-1">
-                          <Check size={12} strokeWidth={3} /> Save
-                        </button>
-                        <button onClick={() => setEditingId(null)} className="h-8 px-3 glass rounded-lg text-xs font-semibold text-foreground/50">
-                          Cancel
-                        </button>
-                      </div>
+
+        {/* Right Col: Fields */}
+        <div className="lg:col-span-2 space-y-6">
+           <div className="p-8 rounded-[40px] border border-white/[0.08] bg-[#0f1020]/40 space-y-10 shadow-2xl shadow-black/40">
+              
+              {/* Display Name */}
+              <div className="space-y-4">
+                 <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 ring-1 ring-white/10">
+                       <AtSign size={16} />
                     </div>
-                  ) : (
-                    /* View Mode */
-                    <div className="flex items-center gap-2 px-3 py-3.5">
-                      <div className="cursor-grab active:cursor-grabbing p-1 text-foreground/20 hover:text-foreground/50 transition-colors shrink-0">
-                        <GripVertical size={16} />
-                      </div>
-                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => startEdit(link.id, link.title, link.url)}>
-                        <p className="font-semibold text-sm truncate">{link.title}</p>
-                        <p className="text-[11px] text-foreground/30 truncate mt-0.5">{link.url}</p>
-                      </div>
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <button
-                          onClick={() => startEdit(link.id, link.title, link.url)}
-                          className="p-2 hover:bg-accent/5 rounded-lg transition-colors text-foreground/20 hover:text-foreground/60"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 hover:bg-accent/5 rounded-lg transition-colors text-foreground/20 hover:text-foreground/60"
-                          onClick={e => e.stopPropagation()}
-                        >
-                          <ExternalLink size={14} />
-                        </a>
-                        <button
-                          onClick={() => toggleVisibility(link.id, link.is_visible)}
-                          className="p-2 hover:bg-accent/5 rounded-lg transition-colors"
-                        >
-                          {link.is_visible
-                            ? <ToggleRight size={20} className="text-emerald-500" />
-                            : <ToggleLeft size={20} className="text-foreground/20" />
-                          }
-                        </button>
-                        <button
-                          onClick={() => deleteLink(link.id)}
-                          className="p-2 hover:bg-red-500/10 rounded-lg transition-colors text-foreground/20 hover:text-red-500"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                    <label className="text-[11px] font-black text-white/20 uppercase tracking-[0.3em]">Identity Marker</label>
+                 </div>
+                 <input 
+                   className="input-dark bg-black/40 border-white/[0.08] focus:border-indigo-500/50 rounded-2xl h-14 px-6 text-lg font-bold"
+                   placeholder="Display Name" 
+                   value={local.full_name || ''} 
+                   onChange={e => update('full_name', e.target.value)} 
+                 />
+              </div>
+
+              {/* Bio */}
+              <div className="space-y-4">
+                 <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 ring-1 ring-white/10">
+                       <PenTool size={16} />
                     </div>
-                  )}
-                </motion.div>
-              </Reorder.Item>
-            ))}
-          </AnimatePresence>
-        </Reorder.Group>
-      )}
+                    <label className="text-[11px] font-black text-white/20 uppercase tracking-[0.3em]">Transmission Buffer (Bio)</label>
+                 </div>
+                 <textarea 
+                   rows={4}
+                   className="input-dark bg-black/40 border-white/[0.08] focus:border-purple-500/50 rounded-[32px] p-6 text-[15px] resize-none leading-relaxed text-white/80"
+                   placeholder="Write a brief introduction..." 
+                   value={local.bio || ''} 
+                   onChange={e => update('bio', e.target.value)} 
+                 />
+                 <div className="flex justify-between items-center px-2">
+                    <span className="text-[10px] text-white/10 uppercase tracking-widest font-bold">Recommended: &lt; 160 chars</span>
+                    <span className={cn(
+                      'text-[10px] uppercase tracking-widest font-bold font-mono',
+                      (local.bio?.length || 0) > 160 ? 'text-red-400' : 'text-white/20'
+                    )}>
+                       {(local.bio?.length || 0)} / 512
+                    </span>
+                 </div>
+              </div>
+           </div>
+
+           {/* Security Area teaser */}
+           <div className="p-8 rounded-[40px] border border-white/[0.08] bg-[#0f1020]/40 flex items-center justify-between group">
+              <div className="flex items-center gap-6">
+                 <div className="w-14 h-14 rounded-2xl bg-white/[0.04] flex items-center justify-center text-white/20 transition-all group-hover:bg-white/[0.08] group-hover:text-white/40">
+                    <Shield size={28} />
+                 </div>
+                 <div>
+                    <h4 className="text-lg font-bold">Privacy Controls</h4>
+                    <p className="text-xs text-white/20">Sensitive data fields are encrypted by default.</p>
+                 </div>
+              </div>
+              <div className="flex gap-2 p-1 rounded-xl bg-black/40 border border-white/[0.06] hover:scale-105 active:scale-95 transition-all">
+                 <span className="px-4 py-2 rounded-lg bg-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-widest shadow-lg">Mesh Encrypted</span>
+              </div>
+           </div>
+        </div>
+      </div>
     </div>
   );
 }

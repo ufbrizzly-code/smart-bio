@@ -4,7 +4,32 @@ export interface Profile {
   full_name?: string;
   bio?: string;
   avatar_url?: string;
-  theme_id?: string;
+  
+  // Header
+  profile_layout?: 'classic' | 'hero';
+  title_style?: 'text' | 'logo';
+  title_size?: 'small' | 'large';
+  alt_font?: boolean;
+  
+  // Design & Theme
+  theme?: string;
+  wallpaper?: string;
+  wallpaper_style?: 'fill' | 'gradient' | 'blur' | 'pattern' | 'image' | 'video';
+  custom_bg?: string;
+  accent_color?: string;
+  title_color?: string;
+  bio_color?: string;
+  page_text_color?: string;
+  page_font?: string;
+  
+  // Buttons
+  button_style?: 'solid' | 'glass' | 'outline';
+  button_roundness?: 'square' | 'round' | 'rounder' | 'full';
+  button_shadow?: 'none' | 'soft' | 'strong' | 'hard';
+  button_color?: string;
+  button_text_color?: string;
+  
+  show_footer?: boolean;
   created_at: string;
 }
 
