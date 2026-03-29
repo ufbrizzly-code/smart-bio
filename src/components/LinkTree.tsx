@@ -3,17 +3,24 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ExternalLink, Globe, Layout, Share2, 
-  Music, ShoppingBag, Mail, Phone, MessageCircle, Play, 
-  Plus, Disc, Send, ShoppingCart, Package, Eye
+  ExternalLink, Globe, 
+  Music, ShoppingBag, Mail, Disc, Send, ShoppingCart, Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabase } from '@/lib/supabase';
 import { Profile, Link as LinkItem } from '@/lib/types';
+import Link from 'next/link';
 
 interface LinkTreeProps {
   profile: Profile;
   links: LinkItem[];
+}
+
+interface BrandConfig {
+  color: string;
+  label: string;
+  icon: React.ReactNode;
+  gradient: string;
 }
 
 const ROUNDNESS_STYLES: Record<string, string> = {
@@ -32,7 +39,7 @@ const SHADOW_STYLES: Record<string, string> = {
 
 // Custom SVGs to avoid lucide-react brand errors
 const SocialIcon = ({ id }: { id: string }) => {
-  const props = { size: 20, fill: "currentColor" };
+  const props = { fill: "currentColor" };
   switch (id) {
     case 'instagram': return (
       <svg viewBox="0 0 24 24" {...props} width="20" height="20">
@@ -53,7 +60,7 @@ const SocialIcon = ({ id }: { id: string }) => {
   }
 };
 
-function getBrandConfig(title: string, url: string) {
+function getBrandConfig(title: string, url: string): BrandConfig {
   const t = title.toLowerCase();
   const u = url.toLowerCase();
 
@@ -69,7 +76,7 @@ function getBrandConfig(title: string, url: string) {
 }
 
 function getThemeStyles(theme: string | undefined) {
-  const themes: Record<string, any> = {
+  const themes: Record<string, { background: string }> = {
     void: { background: 'linear-gradient(135deg, #020617 0%, #0f0520 100%)' },
     minimalist: { background: '#050505' },
     neon: { background: 'linear-gradient(135deg, #000000 0%, #0d0014 100%)' },
@@ -102,14 +109,14 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
     .sort((a, b) => a.position - b.position);
 
   const shopSettings = (profile as any).shop_settings || {};
-  const shopLayout = shopSettings.layout || 'grid';
+  const shopLayout = (shopSettings.layout as 'grid' | 'list') || 'grid';
   const shopBanner = shopSettings.banner_url || '';
   const shopDesc = shopSettings.description || '';
   const shopAccent = shopSettings.accent_color || profile.accent_color || '#8B5CF6';
 
   const themeStyle = getThemeStyles(profile.theme);
   const bgStyle: React.CSSProperties = {
-    background: profile.custom_bg?.startsWith('http') || profile.custom_bg?.startsWith('https') ? 'transparent' : (profile.custom_bg || (themeStyle as any).background || '#020617'),
+    background: profile.custom_bg?.startsWith('http') || profile.custom_bg?.startsWith('https') ? 'transparent' : (profile.custom_bg || themeStyle.background),
     fontFamily: profile.page_font ? `'${profile.page_font}', sans-serif` : 'Inter, sans-serif',
   };
 
@@ -144,6 +151,7 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
             <div className="absolute -inset-3 rounded-full opacity-40 blur-xl" style={{ backgroundColor: accentColor }} />
             <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 flex items-center justify-center" style={{ borderColor: `${accentColor}60` }}>
               {profile.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-3xl font-bold" style={{ background: `linear-gradient(135deg, ${accentColor}40, ${accentColor}10)`, color: accentColor }}>
@@ -164,14 +172,14 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
             {regularLinks.map((link, index) => {
               const brand = getBrandConfig(link.title, link.url);
               let cardStyle: React.CSSProperties = {
-                background: (brand as any).gradient,
-                borderColor: `${(brand as any).color}25`,
+                background: brand.gradient,
+                borderColor: `${brand.color}25`,
               };
 
               if (profile.button_style === 'solid' && profile.button_color) {
                 cardStyle = { backgroundColor: profile.button_color, borderColor: 'transparent' };
               } else if (profile.button_style === 'outline') {
-                cardStyle = { backgroundColor: 'transparent', borderColor: profile.button_color || (brand as any).color, borderWidth: '2px' };
+                cardStyle = { backgroundColor: 'transparent', borderColor: profile.button_color || brand.color, borderWidth: '2px' };
               }
 
               return (
@@ -184,16 +192,16 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05, duration: 0.4 }}
-                  whileHover={{ y: -3, boxShadow: `0 12px 40px ${(brand as any).color}30`, borderColor: `${(brand as any).color}50` }}
+                  whileHover={{ y: -3, boxShadow: `0 12px 40px ${brand.color}30`, borderColor: `${brand.color}50` }}
                   className={cn("flex items-center gap-4 p-4 h-[68px] border cursor-pointer transition-all select-none group relative overflow-hidden", roundness, shadow)}
                   style={cardStyle}
                 >
-                  <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${(brand as any).color}20`, color: (brand as any).color }}>
-                    {(brand as any).icon}
+                  <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${brand.color}20`, color: brand.color }}>
+                    {brand.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="font-bold text-[16px] block truncate" style={{ color: profile.button_text_color || '#f8fafc' }}>{link.title}</span>
-                    <span className="text-[9px] uppercase font-black tracking-widest text-white/10 group-hover:text-white/30 transition-colors block mt-0.5">{(brand as any).label}</span>
+                    <span className="text-[9px] uppercase font-black tracking-widest text-white/10 group-hover:text-white/30 transition-colors block mt-0.5">{brand.label}</span>
                   </div>
                   <ExternalLink size={14} className="flex-shrink-0 opacity-0 group-hover:opacity-40 transition-opacity" style={{ color: profile.button_text_color || '#f8fafc' }} />
                 </motion.a>
@@ -208,6 +216,7 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
               <div className="space-y-6 text-center">
                  {shopBanner && (
                     <div className="w-full aspect-[3/1] rounded-[32px] overflow-hidden border border-white/10 shadow-2xl mb-8">
+                       {/* eslint-disable-next-line @next/next/no-img-element */}
                        <img src={shopBanner} className="w-full h-full object-cover" alt="" />
                     </div>
                  )}
@@ -227,7 +236,7 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
               )}>
                  {shopItems.map((item) => {
                     const parts = item.url.split('||');
-                    const meta: any = {};
+                    const meta: Record<string, string> = {};
                     parts.forEach(p => { if (p.includes(':')) { const [k, ...v] = p.split(':'); meta[k] = v.join(':'); }});
                     
                     return (
@@ -245,6 +254,7 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
                        >
                           <div className={cn("relative w-full aspect-square overflow-hidden mb-6", (profile.button_roundness || 'rounder') === 'square' ? 'rounded-none' : 'rounded-[24px]')}>
                              {meta.img ? (
+                                // eslint-disable-next-line @next/next/no-img-element
                                 <img src={meta.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
                              ) : (
                                 <div className="w-full h-full bg-white/5 flex items-center justify-center text-white/10"><Package size={48} /></div>
@@ -271,18 +281,18 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
 
         {/* CTA Button */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.4 }} className="mt-24">
-          <a href="/" className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90 hover:scale-105" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7, #3b82f6)', boxShadow: '0 15px 40px rgba(168,85,247,0.4)' }}>
+          <Link href="/" className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90 hover:scale-105" style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7, #3b82f6)', boxShadow: '0 15px 40px rgba(168,85,247,0.4)' }}>
             <span>✦</span>
             Brand your own Bio
-          </a>
+          </Link>
         </motion.div>
 
         {/* Footer */}
         {profile.show_footer !== false && (
           <motion.footer initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="mt-20 flex flex-col items-center gap-5">
             <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(248,250,252,0.2)' }}>
-              <a href="#" className="hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms</a>
+              <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="#" className="hover:text-white transition-colors">Terms</Link>
             </div>
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(248,250,252,0.2)' }}>
               <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]" />

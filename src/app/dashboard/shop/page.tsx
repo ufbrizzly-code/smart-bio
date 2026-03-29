@@ -3,10 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Loader2, ShoppingBag, Plus, Trash2, Check, ExternalLink, 
-  DollarSign, Store, Tag, Sparkles, Upload, Image as ImageIcon,
-  FileText, Package, Eye, Settings, ClipboardList, Palette,
-  ChevronDown, X, Save, History, TrendingUp, User
+  Loader2, ShoppingBag, Plus, Trash2, Save, 
+  Upload, Package, Eye, Settings, ClipboardList, Palette,
+  ChevronDown, X, TrendingUp, User, FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabase } from '@/lib/supabase';
@@ -32,17 +31,25 @@ interface Order {
   date: string;
 }
 
+interface DBLink {
+  id: string;
+  title: string;
+  url: string;
+  position: number;
+  is_visible: boolean;
+}
+
 type ShopTab = 'customize' | 'settings' | 'orders';
 
 export default function ShopPage() {
-  const { profile, setProfile, refreshProfile } = useProfile();
+  const { profile } = useProfile();
   const supabase = getSupabase();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState<ShopTab>('customize');
   
-  // Customization State (Linked to Profile)
+  // Customization State
   const [bannerUrl, setBannerUrl] = useState('');
   const [shopDesc, setShopDesc] = useState('Welcome to my shop! Find amazing products here.');
   const [accentColor, setAccentColor] = useState('#8B5CF6');
@@ -51,7 +58,7 @@ export default function ShopPage() {
   // Form State
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
-  const [currency, setCurrency] = useState('USD $');
+  const [currency] = useState('USD $');
   const [description, setDescription] = useState('');
   const [productType, setProductType] = useState<'digital' | 'physical'>('digital');
   const [url, setUrl] = useState('');
@@ -65,7 +72,7 @@ export default function ShopPage() {
   const bannerRef = useRef<HTMLInputElement>(null);
 
   // Mock Orders State
-  const [orders, setOrders] = useState<Order[]>([
+  const [orders] = useState<Order[]>([
     { id: '1', customer: 'alex@example.com', product: 'Digital Art Pack', amount: '29.99', status: 'paid', date: '2 hours ago' },
     { id: '2', customer: 'sarah.j@web.net', product: 'Minimalist Presets', amount: '15.00', status: 'paid', date: '5 hours ago' },
     { id: '3', customer: 'mike_ru@proton.me', product: 'Signed Hoodie', amount: '85.00', status: 'shipped', date: 'Yesterday' },
@@ -82,9 +89,9 @@ export default function ShopPage() {
         .order('position', { ascending: true });
 
       if (data) {
-        setProducts(data.map((d: any) => {
+        setProducts((data as DBLink[]).map((d) => {
           const parts = d.url.split('||');
-          const meta: any = {};
+          const meta: Record<string, string> = {};
           parts.forEach((p: string) => {
              if (p.includes(':')) {
                 const [k, ...v] = p.split(':');
@@ -99,14 +106,11 @@ export default function ShopPage() {
             price: meta.price || '',
             image_url: meta.img || '',
             description: meta.desc || '',
-            type: (meta.type as any) || 'digital',
+            type: (meta.type as 'digital' | 'physical') || 'digital',
             active: d.is_visible
           };
         }));
       }
-
-      // Load shop appearance from profile (if meta exists in bio or custom fields)
-      // For now, using local state or profile context if possible
     };
     load();
   }, [profile, supabase]);
@@ -135,7 +139,6 @@ export default function ShopPage() {
 
   const handleApplyCustomization = async () => {
      setApplying(true);
-     // Simulate saving to profile settings
      setTimeout(() => {
         setApplying(false);
         alert('Shop appearance updated successfully!');
@@ -161,8 +164,9 @@ export default function ShopPage() {
       .select()
       .single();
 
-    if (!error && data) {
-      setProducts(prev => [...prev, { id: data.id, title, price, url, image_url, description, type: productType, active: isActive }]);
+    if (!error && (data as DBLink)) {
+      const d = data as DBLink;
+      setProducts(prev => [...prev, { id: d.id, title, price, url, image_url, description, type: productType, active: isActive }]);
       setTitle(''); setPrice(''); setUrl(''); setImageUrl(''); setDescription(''); setProductType('digital');
       setShowForm(false);
     }
@@ -230,6 +234,7 @@ export default function ShopPage() {
                     className="w-full aspect-[4/1] rounded-[32px] border-2 border-dashed border-white/5 bg-white/[0.02] flex flex-col items-center justify-center gap-4 group cursor-pointer hover:border-white/20 transition-all overflow-hidden relative"
                   >
                      {bannerUrl ? (
+                         // eslint-disable-next-line @next/next/no-img-element
                          <img src={bannerUrl} className="w-full h-full object-cover" alt="Banner" />
                      ) : (
                         <>
@@ -304,7 +309,10 @@ export default function ShopPage() {
                   {products.map(p => (
                      <div key={p.id} className="group relative p-4 rounded-[24px] border border-white/[0.05] bg-black/40 flex items-center gap-4 hover:border-white/20 transition-all">
                         <div className="w-16 h-16 rounded-xl bg-white/5 overflow-hidden flex-shrink-0">
-                           {p.image_url ? <img src={p.image_url} className="w-full h-full object-cover" alt="" /> : <Package className="w-full h-full p-4 text-white/10" />}
+                           {p.image_url ? 
+                             // eslint-disable-next-line @next/next/no-img-element
+                             <img src={p.image_url} className="w-full h-full object-cover" alt="" /> 
+                             : <Package className="w-full h-full p-4 text-white/10" />}
                         </div>
                         <div className="flex-1 min-w-0">
                            <h3 className="font-bold text-white truncate text-md">{p.title}</h3>
@@ -393,7 +401,7 @@ export default function ShopPage() {
 
              <div className="p-6 rounded-[40px] border border-white/[0.08] bg-[#0a0c16]/50 overflow-hidden">
                 <div className="flex items-center gap-4 mb-8 px-4">
-                   <History className="text-white/20" size={20} />
+                   <History size={20} className="text-white/20" />
                    <h2 className="text-lg font-bold text-white tracking-tight">Recent Sales</h2>
                 </div>
                 <div className="space-y-2">
@@ -424,7 +432,7 @@ export default function ShopPage() {
 
       </AnimatePresence>
 
-      {/* New Product Modal (Same as before but with form fields hooked) */}
+      {/* New Product Modal */}
       <AnimatePresence>
         {showForm && (
           <div className="fixed inset-0 z-[100] grid place-items-center p-6 bg-black/90 backdrop-blur-3xl overflow-y-auto">
@@ -506,3 +514,16 @@ export default function ShopPage() {
     </div>
   );
 }
+
+// Icons from lucide-react brand that we can't import directly without build errors are handled in LinkTree or other pages
+const Tag = ({ size, className }: { size?: number, className?: string }) => (
+  <svg width={size || 20} height={size || 20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/>
+  </svg>
+);
+
+const History = ({ size, className }: { size?: number, className?: string }) => (
+  <svg width={size || 20} height={size || 20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><path d="M12 2a10 10 0 1 0 10 10"/>
+  </svg>
+);
