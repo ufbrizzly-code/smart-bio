@@ -1,190 +1,258 @@
-'use client'; // Pure 100% Client-side Auth
+'use client';
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowRight, Mail, Lock, Check, Loader2 } from 'lucide-react';
+import { 
+  ArrowRight, Sparkles, LogIn, UserPlus, 
+  ChevronRight, Fingerprint, Cpu, ShieldCheck, 
+  Hexagon, Zap, Globe, MessageCircle
+} from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 import { getSupabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialUsername = searchParams.get('username') || '';
   const supabase = getSupabase();
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(initialUsername);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    if (isSignUp) {
-      const { data, error: authError } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-        }
-      });
-
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-      } else if (data.user && !data.session) {
-        setError("🎉 Check your email for a confirmation link!");
-        setLoading(false);
+    try {
+      if (mode === 'signup') {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { username } }
+        });
+        if (signUpError) throw signUpError;
+        router.push('/dashboard');
       } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
         router.push('/dashboard');
       }
-    } else {
-      const { error: authError } = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
-      });
-
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-      } else {
-        router.push('/dashboard');
-      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred during transmission.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background relative overflow-hidden">
-      <div className="glow-bg" />
+    <div className="min-h-screen bg-[#020617] text-white flex overflow-hidden font-inter relative">
       
-      {/* Decorative Left Side */}
-      <div className="hidden lg:flex flex-col justify-center p-20 relative z-10 border-r border-glass-border">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-12 h-12 bg-accent rounded-2xl flex items-center justify-center text-background mb-8 shadow-xl shadow-accent/10"
-        >
-          <Sparkles size={24} />
-        </motion.div>
-        
-        <motion.h1 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-6xl font-bold tracking-tighter max-w-sm mb-6 bg-gradient-to-b from-foreground to-foreground/40 bg-clip-text text-transparent"
-        >
-          Launch <br />
-          Your Link <br />
-          In Seconds.
-        </motion.h1>
-        
-        <motion.p 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="text-lg text-foreground/40 max-w-sm"
-        >
-          The most intelligent bio link tool for creators and businesses.
-          Join 850+ users growing their audience today.
-        </motion.p>
+      {/* ── BACKGROUND ACCENTS ────────────────────────────────────────────── */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[140px]" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[50%] h-[50%] bg-rose-600/20 rounded-full blur-[140px]" />
       </div>
 
-      {/* Auth Form Right Side */}
-      <div className="flex flex-col justify-center items-center p-8 relative z-10">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md glass p-10 rounded-3xl"
-        >
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold tracking-tight mb-2">
-              {isSignUp ? 'Create an account' : 'Welcome back'}
-            </h2>
-            <p className="text-sm text-foreground/40 font-medium">
-              Start your journey with SmartBio.
-            </p>
-          </div>
+      {/* ── LEFT SIDE: VISUAL STORYTELLING (Desktop Only) ─────────────────── */}
+      <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-center px-24 z-10 overflow-hidden bg-white/[0.01] border-r border-white/5">
+         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay" />
+         
+         <Link href="/" className="absolute top-12 left-12 flex items-center gap-4 group">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-xl group-hover:scale-110 transition-all">
+               <Sparkles size={18} />
+            </div>
+            <span className="font-black text-xl uppercase tracking-tighter">Smart Link</span>
+         </Link>
 
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-foreground/40 ml-1">Email</label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/20 group-focus-within:text-accent transition-colors" size={18} />
-                <input
-                  type="email"
-                  placeholder="name@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-12 bg-accent/5 border border-glass-border rounded-2xl pl-12 pr-4 outline-none focus:ring-2 focus:ring-accent/10 focus:border-accent/20 transition-all font-medium"
-                />
-              </div>
+         <motion.div
+           initial={{ opacity: 0, x: -40 }}
+           animate={{ opacity: 1, x: 0 }}
+           transition={{ duration: 0.8 }}
+           className="space-y-12"
+         >
+            <div className="space-y-4">
+              <h2 className="text-7xl font-black tracking-tighter leading-[0.85]">
+                 ESTABLISH <br />
+                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-cyan-400 to-rose-400">IDENTITY.</span>
+              </h2>
+              <p className="text-xl text-white/30 max-w-md font-medium leading-relaxed">
+                 Enter the next generation of creative networking. Your digital resonance starts here.
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-foreground/40 ml-1">Password</label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-foreground/20 group-focus-within:text-accent transition-colors" size={18} />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-12 bg-accent/5 border border-glass-border rounded-2xl pl-12 pr-4 outline-none focus:ring-2 focus:ring-accent/10 focus:border-accent/20 transition-all font-medium"
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-6">
+               <LandingInsight icon={<Cpu />} title="Hyper-Node" detail="Zero latency propagation" color="indigo" />
+               <LandingInsight icon={<ShieldCheck />} title="Encrypted" detail="Biometric identity shielding" color="cyan" />
             </div>
 
-            <AnimatePresence mode="wait">
+            <div className="pt-20 flex items-center gap-6">
+               <div className="flex -space-x-4">
+                  {[1,2,3].map(i => <div key={i} className="w-12 h-12 rounded-full border-4 border-[#020617] bg-white/5 bg-[url('https://api.dicebear.com/7.x/avataaars/svg?seed=j')] scale-100 ring-2 ring-indigo-500/20" />)}
+               </div>
+               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Joining 90k+ elite entities</p>
+            </div>
+         </motion.div>
+      </div>
+
+      {/* ── RIGHT SIDE: AUTHENTICATION FORM ────────────────────────────────── */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 md:px-24 py-20 z-10">
+         <motion.div 
+           initial={{ opacity: 0, scale: 0.95 }}
+           animate={{ opacity: 1, scale: 1 }}
+           className="w-full max-w-[480px] space-y-12"
+         >
+            {/* Header / Mode Switch */}
+            <div className="space-y-4 text-center lg:text-left">
+               <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase">
+                 {mode === 'login' ? 'Welcome Back' : 'Create Profile'}
+               </h1>
+               <p className="text-white/40 font-medium">
+                 {mode === 'login' 
+                   ? "Synchronize your parameters with the central mesh." 
+                   : "Begin your propagation across the smart network."}
+               </p>
+               
+               <div className="pt-8 flex gap-4">
+                  <button 
+                    onClick={() => setMode('login')}
+                    className={cn(
+                      "px-6 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all",
+                      mode === 'login' ? "bg-white text-black shadow-xl" : "bg-white/[0.05] text-white/40 hover:bg-white/10"
+                    )}
+                  >
+                    Login
+                  </button>
+                  <button 
+                    onClick={() => setMode('signup')}
+                    className={cn(
+                      "px-6 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all",
+                      mode === 'signup' ? "bg-white text-black shadow-xl" : "bg-white/[0.05] text-white/40 hover:bg-white/10"
+                    )}
+                  >
+                    Sign Up
+                  </button>
+               </div>
+            </div>
+
+            {/* Error Message */}
+            <AnimatePresence>
               {error && (
-                <motion.p 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="text-xs font-bold text-red-400 bg-red-500/10 p-3 rounded-xl border border-red-500/10"
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-black uppercase tracking-widest leading-relaxed text-center"
                 >
                   {error}
-                </motion.p>
+                </motion.div>
               )}
             </AnimatePresence>
 
-            <button
-              disabled={loading}
-              type="submit"
-              className="w-full h-14 bg-accent text-background rounded-2xl font-bold flex items-center justify-center space-x-2 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : (
-                <>
-                  <span>{isSignUp ? 'Get Started' : 'Continue'}</span>
-                  <ArrowRight size={20} />
-                </>
-              )}
-            </button>
-          </form>
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+               <AnimatePresence mode="popLayout">
+                  {mode === 'signup' && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="space-y-3"
+                    >
+                       <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-2">Identity Handle</label>
+                       <div className="relative group">
+                          <Hexagon className="absolute left-6 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-indigo-500 transition-colors" size={20} />
+                          <input 
+                            required
+                            type="text" 
+                            className="w-full h-16 bg-black/40 border border-white/10 rounded-3xl outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 pl-16 pr-6 text-xl font-bold tracking-tight text-white transition-all transition-all"
+                            placeholder="username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                          />
+                       </div>
+                    </motion.div>
+                  )}
+               </AnimatePresence>
 
-          <div className="relative my-8 text-center">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-glass-border opacity-50"></div></div>
-            <span className="relative bg-background px-4 text-[10px] font-bold uppercase tracking-widest text-foreground/20">or</span>
-          </div>
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-2">Email Endpoint</label>
+                  <div className="relative group">
+                     <Globe className="absolute left-6 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-cyan-500 transition-colors" size={20} />
+                     <input 
+                       required
+                       type="email" 
+                       className="w-full h-16 bg-black/40 border border-white/10 rounded-3xl outline-none focus:border-cyan-500/50 focus:ring-4 focus:ring-cyan-500/5 pl-16 pr-6 text-xl font-bold tracking-tight text-white transition-all"
+                       placeholder="entity@mesh.net"
+                       value={email}
+                       onChange={(e) => setEmail(e.target.value)}
+                     />
+                  </div>
+               </div>
 
-          <div className="grid grid-cols-1 gap-3">
-            <button className="h-12 glass rounded-2xl flex items-center justify-center space-x-2 text-sm font-semibold hover:bg-accent/5 transition-all">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.341-3.369-1.341-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
-              <span>Continue with GitHub</span>
-            </button>
-          </div>
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] ml-2">Security Key</label>
+                  <div className="relative group">
+                     <Fingerprint className="absolute left-6 top-1/2 -translate-y-1/2 text-white/10 group-focus-within:text-rose-500 transition-colors" size={20} />
+                     <input 
+                       required
+                       type="password" 
+                       className="w-full h-16 bg-black/40 border border-white/10 rounded-3xl outline-none focus:border-rose-500/50 focus:ring-4 focus:ring-rose-500/5 pl-16 pr-6 text-xl font-bold tracking-tight text-white transition-all"
+                       placeholder="••••••••"
+                       value={password}
+                       onChange={(e) => setPassword(e.target.value)}
+                     />
+                  </div>
+               </div>
 
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-xs font-bold text-foreground/40 hover:text-accent transition-colors"
-            >
-              {isSignUp ? 'Already have an account? Login' : "Don't have an account? Sign up free"}
-            </button>
-          </div>
-        </motion.div>
+               <button 
+                 disabled={loading}
+                 className="w-full h-20 mt-10 rounded-[32px] bg-gradient-to-r from-indigo-600 via-purple-600 to-rose-600 font-black uppercase text-sm tracking-[0.3em] shadow-2xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-4 group"
+               >
+                 {loading ? <Zap className="animate-spin text-white" size={24} /> : (
+                   <>
+                     {mode === 'login' ? 'INITIATE CONNECTION' : 'GENERATE IDENTITY'}
+                     <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
+                   </>
+                 )}
+               </button>
+            </form>
+
+            <div className="pt-12 text-center text-[10px] font-black uppercase tracking-[0.4em] text-white/10">
+               Secured by transmission protocol v2.4
+            </div>
+         </motion.div>
       </div>
+
     </div>
   );
+}
+
+function LandingInsight({ icon, title, detail, color }: { icon: React.ReactNode, title: string, detail: string, color: string }) {
+   const colors: any = {
+      indigo: 'text-indigo-400 bg-indigo-400/5 border-indigo-400/10',
+      cyan: 'text-cyan-400 bg-cyan-400/5 border-cyan-400/10',
+      rose: 'text-rose-400 bg-rose-400/5 border-rose-400/10',
+   };
+
+   return (
+      <div className={cn("p-8 rounded-[40px] border flex flex-col items-start gap-5 transition-all hover:bg-white/[0.02]", colors[color])}>
+         <div className="w-12 h-12 rounded-2xl bg-white/[0.03] flex items-center justify-center border border-white/5">
+            {icon}
+         </div>
+         <div>
+            <h4 className="text-white font-black tracking-tighter text-xl uppercase mb-1">{title}</h4>
+            <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{detail}</p>
+         </div>
+      </div>
+   );
 }

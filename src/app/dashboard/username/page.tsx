@@ -95,91 +95,89 @@ export default function UsernamePage() {
            
            <div>
               <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.3em] mb-2 uppercase">Live Global Routing</p>
-              <div className="flex items-center justify-center gap-2 group/url cursor-pointer" onClick={copyUrl}>
-                 <span className="text-sm font-bold text-white/30 lowercase">smartbio.link/</span>
-                 <span className={cn(
-                   'text-xl font-black transition-all lowercase',
-                   username ? 'text-white' : 'text-white/10 italic'
-                 )}>
-                   {username || 'yourname'}
-                 </span>
-                 <Copy size={14} className="text-white/10 group-hover/url:text-indigo-400 transition-colors" />
-              </div>
-           </div>
+                  <div className="flex items-center justify-center gap-2 group/url cursor-pointer" onClick={copyUrl}>
+                     <span className="text-sm font-bold text-white/30 lowercase">smartlink.link/</span>
+                     <span className={cn(
+                       'text-xl font-black transition-all lowercase',
+                       username ? 'text-white' : 'text-white/10 italic'
+                     )}>
+                       {username || 'yourname'}
+                     </span>
+                     <Copy size={14} className="text-white/10 group-hover/url:text-indigo-400 transition-colors" />
+                  </div>
+               </div>
 
-           {copied && (
-              <motion.div 
-                 initial={{ opacity: 0, y: 5 }} 
-                 animate={{ opacity: 1, y: 0 }} 
-                 className="text-[10px] text-green-400 font-bold uppercase tracking-widest mt-2"
+               {copied && (
+                  <motion.div 
+                     initial={{ opacity: 0, y: 5 }} 
+                     animate={{ opacity: 1, y: 0 }} 
+                     className="text-[10px] text-green-400 font-bold uppercase tracking-widest mt-2"
+                  >
+                     Identity Path Copied
+                  </motion.div>
+               )}
+            </motion.div>
+
+            {/* Input area */}
+            <div className="p-8 lg:p-12 rounded-[48px] border border-white/[0.08] bg-[#0a0b1e]/60 backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] pointer-events-none group-hover:bg-indigo-500/20 transition-all duration-700" />
+               
+               <div className="space-y-8 relative z-10">
+                  <div className="space-y-4">
+                     <div className="flex items-center justify-between px-2">
+                        <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">Namespace Terminal</label>
+                        <AnimatePresence>
+                           {checking && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><Loader2 size={14} className="animate-spin text-indigo-400" /></motion.div>}
+                           {available === true && <motion.span initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-[10px] font-black text-green-400 uppercase tracking-widest flex items-center gap-2 bg-green-400/10 px-3 py-1 rounded-full"><Check size={12} strokeWidth={3} /> Available</motion.span>}
+                           {available === false && <motion.span initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-[10px] font-black text-red-400 uppercase tracking-widest flex items-center gap-2 bg-red-400/10 px-3 py-1 rounded-full"><AlertCircle size={12} strokeWidth={3} /> Taken</motion.span>}
+                        </AnimatePresence>
+                     </div>
+
+                     <div className="relative group/input">
+                        <div className="absolute left-8 top-1/2 -translate-y-1/2 text-2xl font-black text-white/10 group-focus-within/input:text-indigo-500/40 transition-colors tracking-tighter">smartlink.link/</div>
+                        <input 
+                          className={cn(
+                            'w-full bg-black/40 border-2 border-white/[0.05] focus:border-indigo-500/50 rounded-3xl h-20 pl-[184px] pr-8 text-2xl font-black transition-all outline-none tracking-tighter selection:bg-indigo-500/30',
+                            available === true ? 'border-green-500/20 text-green-400' : 'text-white'
+                          )}
+                      placeholder="ufbrizzly" 
+                      value={username} 
+                      onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} 
+                    />
+                 </div>
+                 
+                 <div className="flex flex-wrap items-center gap-3 px-4 text-[10px] font-black uppercase tracking-widest text-white/10">
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.03] border border-white/5">
+                       <ShieldCheck size={12} className="text-indigo-400" />
+                       Verified String
+                    </div>
+                    <span>•</span>
+                    <span>Alphanumeric Only</span>
+                    <span>•</span>
+                    <span>3-20 Chars</span>
+                 </div>
+              </div>
+
+              <button
+                onClick={handleSave}
+                disabled={saving || !available || username === profile.username}
+                className={cn(
+                  'w-full h-18 lg:h-20 rounded-3xl font-black uppercase tracking-[0.2em] text-xs transition-all transform active:scale-[0.98] flex items-center justify-center gap-4 relative overflow-hidden group',
+                  available === true 
+                    ? 'bg-white text-black shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:bg-indigo-50' 
+                    : 'bg-white/5 text-white/20 grayscale cursor-not-allowed'
+                )}
               >
-                 Identity Path Copied
-              </motion.div>
-           )}
-        </motion.div>
-
-        {/* Input area */}
-        <div className="p-10 rounded-[40px] border border-white/[0.08] bg-[#0f1020]/40 space-y-8">
-           <div className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                 <label className="text-[11px] font-bold text-white/20 uppercase tracking-[0.2em]">Namespace Handle</label>
-                 {checking && <Loader2 size={12} className="animate-spin text-white/20" />}
-                 {available === true && <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest flex items-center gap-1"><Check size={12} />Available</span>}
-                 {available === false && <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest flex items-center gap-1"><AlertCircle size={12} />Taken</span>}
-              </div>
-
-              <div className="relative">
-                 <div className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 font-bold text-lg">@</div>
-                 <input 
-                   className={cn(
-                     'input-dark bg-black/40 border-white/[0.08] rounded-2xl h-16 px-12 text-xl font-bold transition-all',
-                     available === true ? 'border-green-500/30 text-green-400' : '',
-                     available === false ? 'border-red-500/30 text-red-500' : ''
-                   )}
-                   placeholder="username" 
-                   value={username} 
-                   onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} 
-                 />
-              </div>
-              
-              <div className="flex items-center gap-2 px-2 text-[10px] text-white/20 font-bold uppercase tracking-tighter">
-                 <ShieldCheck size={12} className="text-indigo-500" />
-                 Alphanumeric + Under-scores accepted
-                 <span className="mx-2 filter grayscale opacity-40">|</span>
-                 Min 3, Max 20 chars
-              </div>
+                {saving ? (
+                   <Loader2 size={24} className="animate-spin" />
+                ) : (
+                   <>
+                      <Zap size={20} className="fill-current" />
+                      <span>Execute Protocol Update</span>
+                   </>
+                )}
+              </button>
            </div>
-
-           <button
-             onClick={handleSave}
-             disabled={saving || !available || username === profile.username}
-             className={cn(
-               'w-full h-14 rounded-2xl font-bold text-white transition-all transform active:scale-95 flex items-center justify-center gap-3',
-               available === true 
-                 ? 'bg-gradient-to-r from-green-600 to-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.3)] shadow-indigo-600/20' 
-                 : 'bg-white/5 text-white/20 cursor-not-allowed'
-             )}
-           >
-             {saving ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
-             Update Identity Path
-           </button>
-        </div>
-
-        {/* Suggestion AI - Placeholder teaser */}
-        <div className="p-8 rounded-[40px] border border-dashed border-white/[0.08] bg-white/[0.01] flex items-center justify-between group cursor-pointer hover:bg-indigo-500/5 transition-all">
-           <div className="flex items-center gap-6">
-              <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shadow-xl ring-1 ring-white/10 relative">
-                 <Wand2 size={24} />
-                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-black" />
-              </div>
-              <div>
-                 <h4 className="text-md font-bold text-white/60 group-hover:text-white transition-all">AI Domain Suggestion</h4>
-                 <p className="text-xs text-white/20">Find the perfect name if yours is taken.</p>
-              </div>
-           </div>
-           <button className="px-5 py-2 rounded-full bg-white text-black font-bold text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">
-              Try AI
-           </button>
         </div>
 
       </div>

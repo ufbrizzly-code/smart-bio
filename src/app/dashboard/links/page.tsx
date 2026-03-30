@@ -117,8 +117,14 @@ export default function LinksPage() {
 
   const handleReorder = async (newOrder: LinkItem[]) => {
     setLinks(newOrder);
-    for (let i = 0; i < newOrder.length; i++) {
-       await supabase.from('links').update({ position: i }).eq('id', newOrder[i].id);
+    try {
+      await Promise.all(
+        newOrder.map((link, index) => 
+          supabase.from('links').update({ position: index }).eq('id', link.id)
+        )
+      );
+    } catch (err) {
+      console.error('Failed to update link positions:', err);
     }
   };
 
@@ -237,8 +243,8 @@ export default function LinksPage() {
       {/* Modal - Add Link */}
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 z-[100] grid place-items-center p-6 bg-black/98 backdrop-blur-3xl">
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 30 }} className="w-full max-w-lg rounded-[60px] border border-white/10 bg-[#020617] p-12 shadow-2xl relative overflow-hidden">
+          <div className="fixed inset-0 z-[100] grid place-items-center p-4 lg:p-6 bg-black/98 backdrop-blur-3xl">
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 30 }} className="w-full max-w-lg rounded-[40px] lg:rounded-[60px] border border-white/10 bg-[#020617] p-8 lg:p-12 shadow-2xl relative overflow-hidden">
                {/* Animated Success Background */}
                <AnimatePresence>
                   {successAnim && (
@@ -247,31 +253,31 @@ export default function LinksPage() {
                         className="absolute inset-0 bg-indigo-600/10 flex items-center justify-center z-50 pointer-events-none"
                      >
                         <div className="flex flex-col items-center gap-4">
-                           <motion.div initial={{ scale: 0.5 }} animate={{ scale: [0.5, 1.2, 1] }} className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_50px_rgba(34,197,94,0.5)]">
-                              <Check size={40} className="text-white" />
+                           <motion.div initial={{ scale: 0.5 }} animate={{ scale: [0.5, 1.2, 1] }} className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_50px_rgba(34,197,94,0.5)]">
+                              <Check size={32} className="text-white lg:size-40" />
                            </motion.div>
-                           <span className="text-lg font-black text-white uppercase tracking-[0.3em]">Signal Connected</span>
+                           <span className="text-base lg:text-lg font-black text-white uppercase tracking-[0.3em]">Signal Connected</span>
                         </div>
                      </motion.div>
                   )}
                </AnimatePresence>
 
                <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 blur-[150px]" />
-               <h2 className="text-4xl font-black text-white mb-3 tracking-tighter">Initiate Transmission</h2>
-               <p className="text-sm text-white/30 mb-12 leading-relaxed">Map your digital frequency to the bio matrix.</p>
+               <h2 className="text-2xl lg:text-4xl font-black text-white mb-2 lg:mb-3 tracking-tighter">Initiate Transmission</h2>
+               <p className="text-xs lg:text-sm text-white/30 mb-8 lg:mb-12 leading-relaxed">Map your digital frequency to the bio matrix.</p>
                
-               <div className="space-y-10 relative z-10">
-                  <div className="space-y-4">
-                     <label className="text-[11px] font-black text-white/20 uppercase tracking-[0.3em] ml-2">Alias Node</label>
-                     <input className="input-dark bg-black/60 border-white/[0.08] rounded-3xl h-16 px-8 text-lg font-bold placeholder:text-white/5" placeholder="Twitter" value={newTitle} onChange={e => setNewTitle(e.target.value)} />
+               <div className="space-y-6 lg:space-y-10 relative z-10">
+                  <div className="space-y-3 lg:space-y-4">
+                     <label className="text-[10px] lg:text-[11px] font-black text-white/20 uppercase tracking-[0.3em] ml-2">Alias Node</label>
+                     <input className="input-dark bg-black/60 border-white/[0.08] rounded-2xl lg:rounded-3xl h-14 lg:h-16 px-6 lg:px-8 text-base lg:text-lg font-bold placeholder:text-white/5" placeholder="Twitter" value={newTitle} onChange={e => setNewTitle(e.target.value)} />
                   </div>
-                  <div className="space-y-4">
-                     <label className="text-[11px] font-black text-white/20 uppercase tracking-[0.3em] ml-2">Endpoint Port</label>
-                     <input className="input-dark bg-black/60 border-white/[0.08] rounded-3xl h-16 px-8 text-lg font-mono text-indigo-400 placeholder:text-white/5" placeholder="https://..." value={newUrl} onChange={e => setNewUrl(e.target.value)} />
+                  <div className="space-y-3 lg:space-y-4">
+                     <label className="text-[10px] lg:text-[11px] font-black text-white/20 uppercase tracking-[0.3em] ml-2">Endpoint Port</label>
+                     <input className="input-dark bg-black/60 border-white/[0.08] rounded-2xl lg:rounded-3xl h-14 lg:h-16 px-6 lg:px-8 text-base font-mono text-indigo-400 placeholder:text-white/5" placeholder="https://..." value={newUrl} onChange={e => setNewUrl(e.target.value)} />
                   </div>
-                  <div className="flex gap-6 pt-6">
-                     <button onClick={() => setShowAddModal(false)} className="flex-1 h-16 rounded-3xl font-black text-white/20 hover:bg-white/5 transition-all text-xs uppercase tracking-widest">Abort</button>
-                     <button onClick={createLink} disabled={adding || !newTitle || !newUrl || successAnim} className="flex-[2] h-16 px-12 rounded-3xl font-black text-white transition-all bg-indigo-600 shadow-[0_15px_40px_rgba(79,70,229,0.4)] disabled:opacity-30 text-xs uppercase tracking-widest">{adding ? <Loader2 size={20} className="animate-spin" /> : 'Confirm Connection'}</button>
+                  <div className="flex gap-4 lg:gap-6 pt-4 lg:pt-6">
+                     <button onClick={() => setShowAddModal(false)} className="flex-1 h-14 lg:h-16 rounded-2xl lg:rounded-3xl font-black text-white/20 hover:bg-white/5 transition-all text-[10px] lg:text-xs uppercase tracking-widest">Abort</button>
+                     <button onClick={createLink} disabled={adding || !newTitle || !newUrl || successAnim} className="flex-[2] h-14 lg:h-16 px-6 lg:px-12 rounded-2xl lg:rounded-3xl font-black text-white transition-all bg-indigo-600 shadow-[0_15px_40px_rgba(79,70,229,0.4)] disabled:opacity-30 text-[10px] lg:text-xs uppercase tracking-widest">{adding ? <Loader2 size={20} className="animate-spin" /> : 'Confirm Connection'}</button>
                   </div>
                </div>
             </motion.div>

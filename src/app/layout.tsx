@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'SmartBio — Your Smart Link in Bio',
-  description: 'One link. Unlimited intelligence. The link-in-bio platform that adapts to your visitors.',
+  title: 'Smart Link — Beyond the Bio Link',
+  description: 'The most advanced digital presence for creative entities. Dynamic link optimization, real-time analytics, and automated boutiques.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

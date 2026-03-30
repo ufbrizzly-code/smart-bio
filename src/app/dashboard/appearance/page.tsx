@@ -184,22 +184,21 @@ export default function AppearancePage() {
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Templates</h1>
-          <p className="text-sm text-white/40 mt-1">Design & Visual customization studio</p>
+          <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight">STUDIO</h1>
+          <p className="text-xs lg:text-sm text-white/30 mt-1 uppercase tracking-widest font-bold">Visual customization engine</p>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
           className={cn(
-            'px-6 py-2.5 rounded-full text-sm font-bold transition-all flex items-center gap-2',
-            saved ? 'bg-green-600' : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-[0_0_20px_rgba(79,70,229,0.3)] shadow-lg'
+            'px-8 lg:px-10 h-12 lg:h-14 rounded-2xl text-[12px] lg:text-[14px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 relative overflow-hidden group w-full md:w-auto',
+            saved ? 'bg-green-600 text-white shadow-lg shadow-green-900/20' : 'bg-white text-black hover:bg-white/90 shadow-xl shadow-black/80'
           )}
         >
-          {saving && <Loader2 size={15} className="animate-spin" />}
-          {saved && <Check size={15} />}
-          {saved ? 'Saved' : saving ? 'Saving' : 'Save Changes'}
+          {saving ? <Loader2 size={18} className="animate-spin" /> : saved ? <Check size={18} /> : <Zap size={18} />}
+          <span>{saved ? 'Synchronized' : saving ? 'Transmitting' : 'Apply Changes'}</span>
         </button>
       </div>
 
@@ -316,7 +315,7 @@ export default function AppearancePage() {
                     </span>
                  </div>
                  
-                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
                     {THEMES.map(theme => {
                       const selected = (local.theme || 'void') === theme.id;
                       return (
@@ -324,14 +323,14 @@ export default function AppearancePage() {
                           key={theme.id}
                           onClick={() => update('theme', theme.id)}
                           className={cn(
-                            'group relative rounded-[28px] overflow-hidden border-2 text-left transition-all hover:scale-[1.02] active:scale-95',
+                            'group relative rounded-[24px] lg:rounded-[28px] overflow-hidden border-2 text-left transition-all hover:scale-[1.02] active:scale-95',
                             selected 
-                              ? 'border-purple-600 shadow-[0_20px_40px_rgba(147,51,234,0.3)] ring-1 ring-purple-600/50' 
+                              ? 'border-indigo-600 shadow-[0_20px_40px_rgba(79,70,229,0.3)] ring-1 ring-indigo-600/50' 
                               : 'border-white/[0.06] hover:border-white/20'
                           )}
                         >
                           {/* Visual Preview */}
-                          <div className="h-28 relative overflow-hidden" style={{ background: theme.bg }}>
+                          <div className="h-24 lg:h-28 relative overflow-hidden" style={{ background: theme.bg }}>
                              {/* Floating elements to simulate the theme */}
                              <div 
                                className="absolute top-2 left-1/2 -to-x-1/2 w-20 h-20 rounded-full blur-2xl opacity-40 animate-pulse" 
@@ -343,17 +342,17 @@ export default function AppearancePage() {
                              </div>
                              {/* Selected Dot */}
                              {selected && (
-                                <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white text-purple-600 flex items-center justify-center shadow-xl">
+                                <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white text-indigo-600 flex items-center justify-center shadow-xl">
                                    <Check size={14} strokeWidth={3} />
                                 </div>
                              )}
                           </div>
                           {/* Details */}
-                          <div className="p-4 bg-white/[0.02]">
-                             <p className="text-[14px] font-bold text-white flex items-center gap-2">
+                          <div className="p-3 lg:p-4 bg-white/[0.02]">
+                             <p className="text-[12px] lg:text-[14px] font-bold text-white flex items-center gap-2">
                                 {theme.label}
                              </p>
-                             <p className="text-[11px] text-white/30 mt-0.5">{theme.desc}</p>
+                             <p className="text-[10px] lg:text-[11px] text-white/30 mt-0.5">{theme.desc}</p>
                           </div>
                         </button>
                       );
@@ -568,10 +567,10 @@ export default function AppearancePage() {
           {activeTab === 'footer' && (
             <div className="max-w-md space-y-4">
                <SectionTitle>Page Meta & Footer</SectionTitle>
-               <div className="flex items-center justify-between p-6 rounded-3xl border border-white/5 bg-white/[0.02]">
+               <div className="flex items-center justify-between p-6 rounded-[32px] border border-white/5 bg-white/[0.02]">
                   <div>
-                    <h4 className="text-sm font-bold">SmartBio Branding</h4>
-                    <p className="text-[11px] text-white/30 mt-0.5">Show the powered-by badge at bottom</p>
+                    <h4 className="text-sm font-bold">Smart Link Branding</h4>
+                    <p className="text-[11px] text-white/30 mt-0.5">Show the broadcast signature</p>
                   </div>
                   <Toggle on={local.show_footer !== false} onClick={() => update('show_footer', !local.show_footer)} />
                </div>

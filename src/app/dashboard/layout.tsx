@@ -7,7 +7,7 @@ import {
   LogOut, Sparkles, ExternalLink, Eye, EyeOff, Copy, Check,
   User, AtSign, Link as LinkIcon, Image, Music, ShoppingBag,
   Share2, LayoutTemplate, BarChart3, Settings, ChevronRight,
-  Monitor, Smartphone
+  Monitor, Smartphone, Menu, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabase } from '@/lib/supabase';
@@ -27,7 +27,7 @@ const TABS = [
   { label: 'Analytics',  href: '/dashboard/analytics',    icon: BarChart3,     exact: false },
 ];
 
-function LivePreview({ isMobile }: { isMobile: boolean }) {
+function LivePreview({ show, onClose }: { show: boolean, onClose: () => void }) {
   const { profile, links } = useProfile();
   const [copied, setCopied] = useState(false);
 
@@ -43,13 +43,21 @@ function LivePreview({ isMobile }: { isMobile: boolean }) {
 
   return (
     <div className={cn(
-       "flex flex-col shrink-0 sticky top-0 h-screen transition-all duration-500",
-       isMobile ? "w-0 overflow-hidden lg:w-[400px] border-l border-white/[0.06] bg-[#020617]" : "w-0 overflow-hidden"
+       "fixed inset-0 lg:relative lg:inset-auto z-50 lg:z-0 transition-all duration-500 flex flex-col",
+       show ? "translate-y-0 opacity-100 lg:w-[400px] border-l border-white/[0.06] bg-[#020617]" : "translate-y-full lg:translate-y-0 opacity-0 lg:opacity-100 lg:w-0 overflow-hidden"
     )}>
-      <div className="flex-1 flex flex-col p-8 overflow-hidden">
+      <div className="flex-1 flex flex-col p-4 lg:p-8 overflow-hidden relative">
+        {/* Mobile Close Button */}
+        <button 
+          onClick={onClose}
+          className="lg:hidden absolute top-6 right-6 z-50 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white backdrop-blur-md border border-white/10"
+        >
+          <X size={20} />
+        </button>
+
         {/* Preview Frame */}
-        <div className="relative flex-1 rounded-[48px] border border-white/[0.08] bg-black shadow-2xl overflow-hidden flex flex-col">
-          <div className="px-6 py-5 flex items-center justify-between border-b border-white/[0.04]">
+        <div className="relative flex-1 rounded-[32px] lg:rounded-[48px] border border-white/[0.08] bg-black shadow-2xl overflow-hidden flex flex-col">
+          <div className="px-6 py-4 lg:py-5 flex items-center justify-between border-b border-white/[0.04]">
              <div className="flex items-center gap-2">
                 <Smartphone size={14} className="text-white/40" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Broadcasting Live</span>
@@ -60,13 +68,13 @@ function LivePreview({ isMobile }: { isMobile: boolean }) {
              </button>
           </div>
 
-          <div className="relative flex-1 bg-[#020617] p-8 overflow-hidden grid place-items-center">
-             <div className="relative w-[280px] h-[580px] rounded-[54px] border-[8px] border-[#121212] bg-[#020617] shadow-[0_0_80px_rgba(0,0,0,0.8)] overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-6 flex justify-center z-20">
-                    <div className="w-24 h-4 bg-black rounded-b-3xl border-x border-b border-white/[0.05]" />
+          <div className="relative flex-1 bg-[#020617] p-4 lg:p-8 overflow-hidden grid place-items-center">
+             <div className="relative w-full max-w-[280px] aspect-[9/19] rounded-[40px] lg:rounded-[54px] border-[6px] lg:border-[8px] border-[#121212] bg-[#020617] shadow-[0_0_80px_rgba(0,0,0,0.8)] overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-4 lg:h-6 flex justify-center z-20">
+                    <div className="w-16 lg:w-24 h-3 lg:h-4 bg-black rounded-b-2xl lg:rounded-b-3xl border-x border-b border-white/[0.05]" />
                 </div>
-                <div className="absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-none pt-8 pb-4">
-                  <div style={{ transform: 'scale(0.62)', transformOrigin: 'top center', width: '450px', marginLeft: '-85px' }}>
+                <div className="absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-none pt-6 lg:pt-8 pb-4">
+                  <div className="flex justify-center" style={{ transform: 'scale(0.62)', transformOrigin: 'top center', width: '450px', marginLeft: '-85px' }}>
                     {profile && <LinkTree profile={profile} links={links} />}
                   </div>
                 </div>
@@ -83,17 +91,26 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const supabase = getSupabase();
   const { profile } = useProfile();
-  const [showPreview, setShowPreview] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/login');
   };
 
+  useEffect(() => {
+    // Hide preview on path change for mobile
+    if (window.innerWidth < 1024) {
+      setShowPreview(false);
+    }
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   return (
     <div className="min-h-screen bg-[#020617] text-white flex overflow-hidden font-inter">
       
-      {/* ── VERTICAL SIDEBAR ────────────────────────────────────────────── */}
+      {/* ── VERTICAL SIDEBAR (Desktop) ────────────────────────────────────────────── */}
       <aside className="w-[280px] shrink-0 border-r border-white/[0.06] bg-[#020617] hidden xl:flex flex-col z-50">
          <div className="p-8 pb-12">
             <Link href="/" className="flex items-center gap-4 group">
@@ -101,8 +118,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   <Sparkles size={18} />
                </div>
                <div>
-                  <h1 className="font-black text-lg tracking-tight">VOIDLINKS</h1>
-                  <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] -mt-1">Creative Studio</p>
+                  <h1 className="font-black text-lg tracking-tight">SMART LINK</h1>
+                  <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] -mt-1">Identity Studio</p>
                </div>
             </Link>
          </div>
@@ -132,45 +149,90 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
          </div>
       </aside>
 
+      {/* ── MOBILE OVERLAY MENU ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed inset-0 z-[60] bg-[#020617] p-6 xl:hidden overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-10">
+               <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-[14px] bg-indigo-600 flex items-center justify-center">
+                    <Sparkles size={18} />
+                  </div>
+                  <h1 className="font-black text-lg tracking-tight">SMART LINK</h1>
+               </div>
+               <button onClick={() => setMobileMenuOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                  <X size={20} />
+               </button>
+            </div>
+            <nav className="grid grid-cols-2 gap-3 pb-20">
+              {TABS.map(tab => {
+                 const isActive = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
+                 return (
+                    <Link key={tab.href} href={tab.href} className={cn(
+                       "flex flex-col items-center gap-4 p-5 rounded-3xl text-sm font-bold transition-all border",
+                       isActive ? "text-white bg-indigo-600/10 border-indigo-500/30 ring-1 ring-indigo-500/20" : "text-white/30 bg-white/[0.02] border-white/5"
+                    )}>
+                       <tab.icon size={20} className={isActive ? "text-indigo-400" : ""} />
+                       <span>{tab.label}</span>
+                    </Link>
+                 );
+              })}
+              <button onClick={handleSignOut} className="col-span-2 flex items-center justify-center gap-4 p-5 rounded-3xl text-sm font-bold text-red-400 bg-red-400/5 border border-red-400/10 mt-4">
+                 <LogOut size={18} />
+                 Sign Out Transmission
+              </button>
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── MAIN WORKSET area ─────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col relative overflow-hidden bg-[#05060f]">
          {/* Static Glow */}
          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none" />
          
          {/* Global Toolbar */}
-         <header className="h-[90px] shrink-0 flex items-center px-10 justify-between relative z-10">
-            <div className="flex items-center gap-6">
-               <div className="space-y-1">
-                  <h2 className="text-sm font-black text-white/20 uppercase tracking-[0.2em]">Transmission Center</h2>
-                  <div className="flex items-center gap-3">
-                     <span className="text-xl font-bold">Workspace</span>
-                     <ChevronRight size={14} className="text-white/20" />
-                     <span className="text-xl font-bold text-indigo-400 capitalize">{pathname.split('/').pop() || 'Dashboard'}</span>
+         <header className="h-[70px] lg:h-[90px] shrink-0 flex items-center px-4 lg:px-10 justify-between relative z-10 border-b border-white/[0.03] lg:border-none">
+            <div className="flex items-center gap-3 lg:gap-6">
+               <button onClick={() => setMobileMenuOpen(true)} className="xl:hidden w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                  <Menu size={20} />
+               </button>
+               <div className="space-y-0.5 lg:space-y-1">
+                  <h2 className="hidden lg:block text-[8px] lg:text-sm font-black text-white/20 uppercase tracking-[0.2em]">Transmission Center</h2>
+                  <div className="flex items-center gap-2 lg:gap-3">
+                     <span className="hidden lg:block text-xl font-bold">Workspace</span>
+                     <ChevronRight size={12} className="hidden lg:block text-white/20" />
+                     <span className="text-sm lg:text-xl font-bold text-indigo-400 capitalize">{pathname.split('/').pop() || 'Dashboard'}</span>
                   </div>
                </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
                {profile && (
-                  <Link href={`/${profile.username}`} target="_blank" className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[13px] font-bold text-white/60 hover:text-white hover:border-white/10 transition-all">
-                     <ExternalLink size={14} />
-                     Live Page
+                  <Link href={`/${profile.username}`} target="_blank" className="flex items-center gap-2 px-3 lg:px-6 py-2 lg:py-3 rounded-xl lg:rounded-2xl bg-white/[0.02] border border-white/[0.05] text-[10px] lg:text-[13px] font-bold text-white/60 hover:text-white transition-all">
+                     <ExternalLink size={14} className="lg:size-14" />
+                     <span className="hidden sm:inline">Live Page</span>
                   </Link>
                )}
                <button onClick={() => setShowPreview(!showPreview)} className={cn(
-                  "flex items-center gap-2 px-6 py-3 rounded-2xl text-[13px] font-bold transition-all border",
+                  "flex items-center gap-2 px-3 lg:px-6 py-2 lg:py-3 rounded-xl lg:rounded-2xl text-[10px] lg:text-[13px] font-bold transition-all border",
                   showPreview ? "bg-indigo-600 border-transparent text-white shadow-xl shadow-indigo-900/20" : "bg-white/[0.02] border-white/[0.05] text-white/40"
                )}>
                   {showPreview ? <Eye size={14} /> : <EyeOff size={14} />}
-                  Preview
+                  <span className="hidden sm:inline">Preview</span>
                </button>
             </div>
          </header>
 
          {/* Scalable Content Surface */}
-         <section className="flex-1 overflow-y-auto custom-scrollbar px-10 pb-20 relative z-10">
-            <div className="max-w-4xl pt-4">
-               <AnimatePresence mode="wait">
+         <section className="flex-1 overflow-y-auto custom-scrollbar px-4 lg:px-10 pb-20 relative z-10">
+            <div className="max-w-4xl pt-4 mx-auto">
+               <AnimatePresence mode="popLayout" initial={false}>
                  <motion.div key={pathname} initial={{ opacity: 0, scale: 0.98, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -10 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
                    {children}
                  </motion.div>
@@ -178,18 +240,18 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
          </section>
 
-         {/* High Consistency Status */}
-         <footer className="h-10 shrink-0 border-t border-white/[0.03] bg-[#020617] flex items-center justify-between px-10 relative z-10">
+         {/* Mobile Bottom Bar Placeholder or High Consistency Status */}
+         <footer className="h-10 shrink-0 border-t border-white/[0.03] bg-[#020617] hidden lg:flex items-center justify-between px-10 relative z-10">
             <div className="flex items-center gap-6 text-[9px] font-black uppercase tracking-[0.2em] text-white/20">
                <span className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" /> Nodes Ready</span>
                <span>v2.4 Nocturnal Architecture</span>
             </div>
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/10">VoidLinks Studio © 2026</div>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/10">Smart Link Studio © 2026</div>
          </footer>
       </main>
 
       {/* ── DYNAMIC PREVIEW PANEL ────────────────────────────────────────── */}
-      <LivePreview isMobile={showPreview} />
+      <LivePreview show={showPreview} onClose={() => setShowPreview(false)} />
     </div>
   );
 }

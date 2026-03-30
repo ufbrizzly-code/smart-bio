@@ -20,7 +20,7 @@ export default function SharePage() {
 
   const profileUrl = profile 
     ? `${window.location.host}/${profile.username}` 
-    : 'smartbio.link/username';
+    : 'smartlink.link/username';
 
   const handleCopy = () => {
     navigator.clipboard.writeText(`https://${profileUrl}`);
@@ -45,7 +45,7 @@ export default function SharePage() {
       ctx?.drawImage(img, 0, 0, qrSize * 2, qrSize * 2);
       const pngFile = canvas.toDataURL('image/png');
       const downloadLink = document.createElement('a');
-      downloadLink.download = `qr_${profile?.username || 'smartbio'}.png`;
+      downloadLink.download = `qr_${profile?.username || 'smartlink'}.png`;
       downloadLink.href = pngFile;
       downloadLink.click();
       setGenerating(false);

@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ExternalLink, Globe, 
-  Music, ShoppingBag, Mail, Disc, Send, ShoppingCart, Package
+import {
+  ExternalLink, Globe,
+  Music, ShoppingBag, Mail, Disc, Send, ShoppingCart, Package, Volume2, VolumeX, X, Headphones
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabase } from '@/lib/supabase';
@@ -71,7 +71,7 @@ function getBrandConfig(title: string, url: string): BrandConfig {
   if (t.includes('twitter') || t.includes(' x ') || u.includes('twitter.com') || u.includes('x.com')) return { color: '#1DA1F2', label: 'X / Twitter', icon: <Send size={20} />, gradient: 'linear-gradient(135deg, #1DA1F2 0%, #0D8ECF 100%)' };
   if (t.includes('facebook') || u.includes('facebook.com')) return { color: '#1877F2', label: 'Facebook', icon: <SocialIcon id="facebook" />, gradient: 'linear-gradient(135deg, #1877F2 0%, #0C5DC7 100%)' };
   if (t.includes('mail') || u.includes('mailto:')) return { color: '#EA4335', label: 'Email', icon: <Mail size={20} />, gradient: 'linear-gradient(135deg, #EA4335 0%, #C5221F 100%)' };
-  
+
   return { color: '#6366f1', label: 'Website', icon: <Globe size={20} />, gradient: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' };
 }
 
@@ -90,50 +90,80 @@ function getThemeStyles(theme: string | undefined) {
 
 export function LinkTree({ profile, links }: LinkTreeProps) {
   const supabase = getSupabase();
+  const [showPlayer, setShowPlayer] = useState(false);
 
-  const handleLinkClick = async (linkId: string) => {
-    await supabase.from('analytics').insert({
+  const handleLinkClick = (linkId: string) => {
+    // Fire and forget analytics
+    supabase.from('analytics').insert({
       link_id: linkId,
       profile_id: profile.id,
       user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
       referrer: typeof document !== 'undefined' ? document.referrer : '',
+    }).then(({ error }) => {
+      if (error) console.error('Analytics error:', error);
     });
   };
 
-  const regularLinks = (links || [])
-    .filter(link => link.is_visible && !link.title.startsWith('[SHOP]'))
-    .sort((a, b) => a.position - b.position);
+  const { regularLinks, shopItems } = useMemo(() => {
+    const regular = (links || [])
+      .filter(link => link.is_visible && !link.title.startsWith('[SHOP]'))
+      .sort((a, b) => a.position - b.position);
 
-  const shopItems = (links || [])
-    .filter(link => link.is_visible && link.title.startsWith('[SHOP]'))
-    .sort((a, b) => a.position - b.position);
+    const shop = (links || [])
+      .filter(link => link.is_visible && link.title.startsWith('[SHOP]'))
+      .sort((a, b) => a.position - b.position);
+    
+    return { regularLinks: regular, shopItems: shop };
+  }, [links]);
+
+  const themeStyle = useMemo(() => getThemeStyles(profile.theme), [profile.theme]);
+  
+  const { bgStyle, isVideo, isImage } = useMemo(() => {
+    const customBg = profile.custom_bg || '';
+    const isVid = !!customBg.match(/\.(mp4|webm|ogg)$/) || customBg.includes('video');
+    const isImg = !!customBg.match(/\.(jpg|jpeg|png|gif|webp)$/) || (customBg.startsWith('http') && !isVid);
+
+    return {
+      bgStyle: {
+        background: customBg.startsWith('http') ? 'transparent' : (customBg || themeStyle.background),
+        fontFamily: profile.page_font ? `'${profile.page_font}', sans-serif` : 'Inter, sans-serif',
+      },
+      isVideo: isVid,
+      isImage: isImg
+    };
+  }, [profile.custom_bg, profile.page_font, themeStyle]);
+
+  const musicEmbedUrl = useMemo(() => {
+    const url = profile.bio_color;
+    if (!url) return null;
+    if (url.includes('spotify.com/track/')) {
+      const id = url.split('/track/')[1]?.split('?')[0];
+      return `https://open.spotify.com/embed/track/${id}?utm_source=generator&theme=0`;
+    }
+    if (url.includes('soundcloud.com/')) {
+       return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false&color=%238b5cf6&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false`;
+    }
+    if (url.includes('music.apple.com/')) {
+      return url.replace('music.apple.com', 'embed.music.apple.com');
+    }
+    return null;
+  }, [profile.bio_color]);
+
+  const roundness = useMemo(() => ROUNDNESS_STYLES[profile.button_roundness || 'rounder'], [profile.button_roundness]);
+  const shadow = useMemo(() => SHADOW_STYLES[profile.button_shadow || 'soft'], [profile.button_shadow]);
+  const accentColor = profile.accent_color || '#a855f7';
 
   const shopSettings = (profile as any).shop_settings || {};
   const shopLayout = (shopSettings.layout as 'grid' | 'list') || 'grid';
-  const shopBanner = shopSettings.banner_url || '';
-  const shopDesc = shopSettings.description || '';
   const shopAccent = shopSettings.accent_color || profile.accent_color || '#8B5CF6';
-
-  const themeStyle = getThemeStyles(profile.theme);
-  const bgStyle: React.CSSProperties = {
-    background: profile.custom_bg?.startsWith('http') || profile.custom_bg?.startsWith('https') ? 'transparent' : (profile.custom_bg || themeStyle.background),
-    fontFamily: profile.page_font ? `'${profile.page_font}', sans-serif` : 'Inter, sans-serif',
-  };
-
-  const isVideo = profile.custom_bg?.match(/\.(mp4|webm|ogg)$/) || profile.custom_bg?.includes('video');
-  const isImage = profile.custom_bg?.match(/\.(jpg|jpeg|png|gif|webp)$/) || (profile.custom_bg?.startsWith('http') && !isVideo);
-
-  const roundness = ROUNDNESS_STYLES[profile.button_roundness || 'rounder'];
-  const shadow = SHADOW_STYLES[profile.button_shadow || 'soft'];
-  const accentColor = profile.accent_color || '#a855f7';
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center overflow-x-hidden" style={bgStyle}>
-      
+
       {/* Immersive Media Background Layer */}
       {isVideo && (
         <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-[0.4]">
-           <source src={profile.custom_bg} />
+          <source src={profile.custom_bg || ''} />
         </video>
       )}
       {isImage && (
@@ -149,7 +179,7 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex flex-col items-center mb-10 text-center">
           <div className="relative mb-5">
             <div className="absolute -inset-3 rounded-full opacity-40 blur-xl" style={{ backgroundColor: accentColor }} />
-            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 flex items-center justify-center" style={{ borderColor: `${accentColor}60` }}>
+            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 flex items-center justify-center transition-all duration-700" style={{ borderColor: `${accentColor}60` }}>
               {profile.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
@@ -168,7 +198,7 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
 
         {/* REGULAR LINKS SECTION */}
         <div className="w-full space-y-3">
-          <AnimatePresence>
+          <AnimatePresence initial={false}>
             {regularLinks.map((link, index) => {
               const brand = getBrandConfig(link.title, link.url);
               let cardStyle: React.CSSProperties = {
@@ -189,14 +219,14 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => handleLinkClick(link.id)}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.4 }}
+                  transition={{ delay: Math.min(index * 0.05, 0.3), duration: 0.3 }}
                   whileHover={{ y: -3, boxShadow: `0 12px 40px ${brand.color}30`, borderColor: `${brand.color}50` }}
                   className={cn("flex items-center gap-4 p-4 h-[68px] border cursor-pointer transition-all select-none group relative overflow-hidden", roundness, shadow)}
                   style={cardStyle}
                 >
-                  <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${brand.color}20`, color: brand.color }}>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ backgroundColor: `${brand.color}20`, color: brand.color }}>
                     {brand.icon}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -212,71 +242,71 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
 
         {/* DEDICATED SHOP SECTION */}
         {shopItems.length > 0 && (
-           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="w-full mt-20 space-y-12">
-              <div className="space-y-6 text-center">
-                 {shopBanner && (
-                    <div className="w-full aspect-[3/1] rounded-[32px] overflow-hidden border border-white/10 shadow-2xl mb-8">
-                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                       <img src={shopBanner} className="w-full h-full object-cover" alt="" />
-                    </div>
-                 )}
-                 <div className="flex flex-col items-center gap-3">
-                    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2">
-                       <ShoppingCart size={12} className="text-purple-400" />
-                       Vault Collection
-                    </div>
-                    <h2 className="text-3xl font-black text-white tracking-tight">The Boutique</h2>
-                    {shopDesc && <p className="text-sm text-white/40 max-w-sm leading-relaxed mx-auto">{shopDesc}</p>}
-                 </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="w-full mt-20 space-y-12">
+            <div className="space-y-6 text-center">
+              {profile.shop_settings?.banner_url && (
+                <div className="w-full aspect-[3/1] rounded-[32px] overflow-hidden border border-white/10 shadow-2xl mb-8">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={profile.shop_settings.banner_url} className="w-full h-full object-cover" alt="" />
+                </div>
+              )}
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2">
+                  <ShoppingCart size={12} className="text-purple-400" />
+                  Vault Collection
+                </div>
+                <h2 className="text-3xl font-black text-white tracking-tight">The Boutique</h2>
+                {profile.shop_settings?.description && <p className="text-sm text-white/40 max-w-sm leading-relaxed mx-auto">{profile.shop_settings.description}</p>}
               </div>
+            </div>
 
-              <div className={cn(
-                 "w-full gap-6",
-                 shopLayout === 'grid' ? "grid grid-cols-2" : "flex flex-col"
-              )}>
-                 {shopItems.map((item) => {
-                    const parts = item.url.split('||');
-                    const meta: Record<string, string> = {};
-                    parts.forEach(p => { if (p.includes(':')) { const [k, ...v] = p.split(':'); meta[k] = v.join(':'); }});
-                    
-                    return (
-                       <motion.a
-                          key={item.id}
-                          href={parts[0]}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => handleLinkClick(item.id)}
-                          whileHover={{ y: -8, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}
-                          className={cn(
-                             "group relative overflow-hidden bg-black/40 border border-white/[0.08] p-5 transition-all hover:bg-black/60 hover:border-white/20",
-                             (profile.button_roundness || 'rounder') === 'square' ? 'rounded-none' : (profile.button_roundness || 'rounder') === 'round' ? 'rounded-[32px]' : 'rounded-[40px]'
-                          )}
-                       >
-                          <div className={cn("relative w-full aspect-square overflow-hidden mb-6", (profile.button_roundness || 'rounder') === 'square' ? 'rounded-none' : 'rounded-[24px]')}>
-                             {meta.img ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={meta.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
-                             ) : (
-                                <div className="w-full h-full bg-white/5 flex items-center justify-center text-white/10"><Package size={48} /></div>
-                             )}
-                             <div className="absolute top-4 right-4 px-4 py-2 rounded-2xl bg-black/80 backdrop-blur-xl text-xs font-black text-white shadow-2xl border border-white/10">
-                                ${meta.price || '0.00'}
-                             </div>
-                          </div>
-                          <div className="space-y-4">
-                             <h4 className="font-bold text-white text-lg truncate leading-tight tracking-tight">{item.title.replace('[SHOP] ', '')}</h4>
-                             <button 
-                                className="w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-white shadow-xl transition-all transform active:scale-95 group-hover:brightness-110"
-                                style={{ backgroundColor: shopAccent, boxShadow: `0 10px 30px ${shopAccent}30` }}
-                             >
-                                Get Instant Access
-                             </button>
-                          </div>
-                       </motion.a>
-                    );
-                 })}
-              </div>
-           </motion.div>
+            <div className={cn(
+              "w-full gap-6",
+              shopLayout === 'grid' ? "grid grid-cols-2" : "flex flex-col"
+            )}>
+              {shopItems.map((item) => {
+                const parts = item.url.split('||');
+                const meta: Record<string, string> = {};
+                parts.forEach(p => { if (p.includes(':')) { const [k, ...v] = p.split(':'); meta[k] = v.join(':'); } });
+
+                return (
+                  <motion.a
+                    key={item.id}
+                    href={parts[0]}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => handleLinkClick(item.id)}
+                    whileHover={{ y: -8, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}
+                    className={cn(
+                      "group relative overflow-hidden bg-black/40 border border-white/[0.08] p-5 transition-all hover:bg-black/60 hover:border-white/20",
+                      (profile.button_roundness || 'rounder') === 'square' ? 'rounded-none' : (profile.button_roundness || 'rounder') === 'round' ? 'rounded-[32px]' : 'rounded-[40px]'
+                    )}
+                  >
+                    <div className={cn("relative w-full aspect-square overflow-hidden mb-6", (profile.button_roundness || 'rounder') === 'square' ? 'rounded-none' : 'rounded-[24px]')}>
+                      {meta.img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={meta.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt="" />
+                      ) : (
+                        <div className="w-full h-full bg-white/5 flex items-center justify-center text-white/10"><Package size={48} /></div>
+                      )}
+                      <div className="absolute top-4 right-4 px-4 py-2 rounded-2xl bg-black/80 backdrop-blur-xl text-xs font-black text-white shadow-2xl border border-white/10">
+                        ${meta.price || '0.00'}
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-white text-lg truncate leading-tight tracking-tight">{item.title.replace('[SHOP] ', '')}</h4>
+                      <button
+                        className="w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-white shadow-xl transition-all transform active:scale-95 group-hover:brightness-110"
+                        style={{ backgroundColor: shopAccent, boxShadow: `0 10px 30px ${shopAccent}30` }}
+                      >
+                        Get Instant Access
+                      </button>
+                    </div>
+                  </motion.a>
+                );
+              })}
+            </div>
+          </motion.div>
         )}
 
         {/* CTA Button */}
@@ -295,12 +325,66 @@ export function LinkTree({ profile, links }: LinkTreeProps) {
               <Link href="#" className="hover:text-white transition-colors">Terms</Link>
             </div>
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(248,250,252,0.2)' }}>
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]" />
-              <span>Broadcast by <strong className="text-white/40">SmartBio</strong></span>
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]" />
+              <span>Broadcast by <strong className="text-white/40">Smart Link</strong></span>
             </div>
           </motion.footer>
         )}
       </div>
+
+      {/* Floating Background Music Control */}
+      {musicEmbedUrl && (
+        <div className="fixed bottom-6 left-6 z-50">
+           <AnimatePresence>
+             {showPlayer && (
+               <motion.div 
+                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                 animate={{ opacity: 1, y: 0, scale: 1 }}
+                 exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                 className="mb-4 w-[300px] rounded-[32px] bg-[#020617]/90 backdrop-blur-3xl border border-white/10 p-5 shadow-2xl relative"
+               >
+                  <button onClick={() => setShowPlayer(false)} className="absolute top-4 right-4 text-white/20 hover:text-white transition-colors">
+                     <X size={16} />
+                  </button>
+                  <div className="flex items-center gap-4 mb-4">
+                     <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                        <Headphones size={20} />
+                     </div>
+                     <div>
+                        <h4 className="text-[10px] font-black text-white/20 uppercase tracking-widest">Background Audio</h4>
+                        <p className="text-[12px] font-black text-white uppercase tracking-tighter">Studio Transmission</p>
+                     </div>
+                  </div>
+                  <iframe
+                    src={musicEmbedUrl}
+                    width="100%"
+                    height="80"
+                    frameBorder="0"
+                    allowTransparency={true}
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    className="rounded-2xl"
+                  />
+               </motion.div>
+             )}
+           </AnimatePresence>
+
+           <motion.button
+             onClick={() => setShowPlayer(!showPlayer)}
+             whileHover={{ scale: 1.1 }}
+             whileTap={{ scale: 0.9 }}
+             className={cn(
+               "w-12 h-12 rounded-full flex items-center justify-center shadow-2xl border transition-all",
+               showPlayer ? "bg-indigo-600 border-transparent text-white" : "bg-[#020617]/80 backdrop-blur-xl border-white/10 text-white/40 hover:text-white"
+             )}
+           >
+             {showPlayer ? <Volume2 size={20} /> : <VolumeX size={20} />}
+             {!showPlayer && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-indigo-500 rounded-full animate-ping border-2 border-transparent" />
+             )}
+           </motion.button>
+        </div>
+      )}
+
     </div>
   );
 }

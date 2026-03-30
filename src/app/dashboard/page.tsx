@@ -124,7 +124,7 @@ export default function ProfilePage() {
            onClick={handleSave}
            disabled={saving}
            className={cn(
-             'px-10 h-14 rounded-2xl text-[14px] font-black uppercase tracking-widest transition-all flex items-center gap-3 relative overflow-hidden group',
+             'px-4 lg:px-10 h-12 lg:h-14 rounded-2xl text-[12px] lg:text-[14px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 relative overflow-hidden group w-full md:w-auto',
              saved ? 'bg-green-600 text-white shadow-lg shadow-green-900/20' : 'bg-white text-black hover:bg-white/90 shadow-xl shadow-black/80'
            )}
          >
@@ -151,11 +151,11 @@ export default function ProfilePage() {
          
          {/* Main Work Surface */}
          <div className="lg:col-span-4 space-y-8">
-            <div className="bg-[#0a0b1e]/40 border border-white/[0.06] rounded-[40px] p-10 space-y-12 relative overflow-hidden">
+            <div className="bg-[#0a0b1e]/40 border border-white/[0.06] rounded-[32px] lg:rounded-[40px] p-6 lg:p-10 space-y-8 lg:space-y-12 relative overflow-hidden">
                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/5 blur-[100px] rounded-full pointer-events-none" />
 
                {/* Display Name */}
-               <div className="space-y-6 relative z-10">
+               <div className="space-y-4 lg:space-y-6 relative z-10">
                   <div className="flex items-center justify-between">
                      <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-white/20">
@@ -163,10 +163,10 @@ export default function ProfilePage() {
                         </div>
                         <label className="text-xs font-black uppercase tracking-[0.3em] text-white/20">Display Identity</label>
                      </div>
-                     <span className="text-[10px] font-bold text-white/10 uppercase tracking-widest">Global Field</span>
+                     <span className="hidden sm:block text-[10px] font-bold text-white/10 uppercase tracking-widest">Global Field</span>
                   </div>
                   <input 
-                    className="w-full bg-[#05060f]/60 border border-white/[0.06] focus:border-indigo-500/50 rounded-2xl h-16 px-8 text-xl font-bold text-white transition-all outline-none"
+                    className="w-full bg-[#05060f]/60 border border-white/[0.06] focus:border-indigo-500/50 rounded-2xl h-14 lg:h-16 px-6 lg:px-8 text-lg lg:text-xl font-bold text-white transition-all outline-none"
                     placeholder="E.g. Void Studio" 
                     value={local.full_name || ''} 
                     onChange={e => update('full_name', e.target.value)} 
@@ -174,7 +174,7 @@ export default function ProfilePage() {
                </div>
 
                {/* Bio Area */}
-               <div className="space-y-6 relative z-10">
+               <div className="space-y-4 lg:space-y-6 relative z-10">
                   <div className="flex items-center justify-between">
                      <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-white/20">
@@ -183,14 +183,14 @@ export default function ProfilePage() {
                         <label className="text-xs font-black uppercase tracking-[0.3em] text-white/20">Transmission Bio</label>
                      </div>
                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-bold text-white/10 uppercase tracking-widest">Buffer Status</span>
+                        <span className="hidden sm:block text-[10px] font-bold text-white/10 uppercase tracking-widest">Buffer Status</span>
                         <div className={cn("w-2 h-2 rounded-full", (local.bio?.length || 0) > 160 ? "bg-red-500" : "bg-green-500")} />
                      </div>
                   </div>
                   <div className="relative group">
                      <textarea 
                        rows={5}
-                       className="w-full bg-[#05060f]/60 border border-white/[0.06] focus:border-purple-500/50 rounded-[32px] p-8 text-lg font-medium text-white/80 transition-all outline-none resize-none leading-relaxed"
+                       className="w-full bg-[#05060f]/60 border border-white/[0.06] focus:border-purple-500/50 rounded-3xl lg:rounded-[32px] p-6 lg:p-8 text-base lg:text-lg font-medium text-white/80 transition-all outline-none resize-none leading-relaxed"
                        placeholder="Enter your transmission details..." 
                        value={local.bio || ''} 
                        onChange={e => update('bio', e.target.value)} 
@@ -224,53 +224,6 @@ export default function ProfilePage() {
             </div>
          </div>
 
-         {/* Sidebar Status Cluster */}
-         <div className="lg:col-span-2 space-y-6">
-            <div className="bg-gradient-to-br from-[#0a0b1e] to-[#05060f] border border-white/[0.06] rounded-[40px] p-8 space-y-8">
-               <div className="space-y-2">
-                  <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white/20">Studio Status</h3>
-                  <div className="flex items-center justify-between">
-                     <span className="text-sm font-bold text-white/60">Profile Reach</span>
-                     <span className="text-sm font-black text-green-500">100%</span>
-                  </div>
-                  <div className="w-full h-1 bg-white/[0.04] rounded-full overflow-hidden">
-                     <div className="w-full h-full bg-green-500/40 rounded-full" />
-                  </div>
-               </div>
-
-               <div className="p-6 rounded-3xl bg-indigo-500/5 border border-indigo-500/10 space-y-4">
-                  <div className="flex items-center gap-3 text-indigo-400">
-                     <Cpu size={16} />
-                     <span className="text-[10px] font-black uppercase tracking-widest">AI Analytics Enbaled</span>
-                  </div>
-                  <p className="text-[11px] text-white/40 font-medium leading-relaxed uppercase tracking-tighter">
-                     Smart reordering and location-aware links are currently optimizing your page performance.
-                  </p>
-               </div>
-
-               <div className="pt-4 space-y-4">
-                  <button className="w-full flex items-center justify-between px-6 py-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all group">
-                     <span className="text-[11px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Audit Logs</span>
-                     <Terminal size={14} className="text-white/10 group-hover:text-white/40" />
-                  </button>
-                  <button className="w-full flex items-center justify-between px-6 py-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all group">
-                     <span className="text-[11px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Sync History</span>
-                     <Activity size={14} className="text-white/10 group-hover:text-white/40" />
-                  </button>
-               </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-indigo-600/20 to-purple-600/20 rounded-[40px] p-10 relative overflow-hidden group shadow-2xl shadow-indigo-900/20">
-               <Sparkles size={32} className="text-white mb-6 animate-pulse" />
-               <h4 className="text-xl font-black tracking-tight text-white mb-2">Upgrade Mesh</h4>
-               <p className="text-sm text-white/40 leading-relaxed font-bold uppercase tracking-tighter">Unlock unlimited shop listings and verified badges.</p>
-               <div className="mt-8">
-                  <button className="w-full py-4 rounded-2xl bg-white text-black font-black uppercase tracking-widest text-[11px] hover:scale-105 transition-all">Check Pro</button>
-               </div>
-               <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 blur-[60px] rounded-full group-hover:bg-white/20 transition-all pointer-events-none" />
-            </div>
-         </div>
-         
       </div>
     </div>
   );
