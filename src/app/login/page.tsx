@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowRight, Sparkles, LogIn, UserPlus, 
@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { getSupabase } from '@/lib/supabase';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialUsername = searchParams.get('username') || '';
@@ -234,6 +234,18 @@ export default function LoginPage() {
       </div>
 
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+       <div className="min-h-screen bg-[#020617] flex items-center justify-center text-[10px] font-black uppercase tracking-[0.4em] text-white/30 animate-pulse">
+          Establishing Secure Connection...
+       </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
 

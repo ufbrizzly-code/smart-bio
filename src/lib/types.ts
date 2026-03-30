@@ -30,6 +30,7 @@ export interface Profile {
   button_text_color?: string;
   
   show_footer?: boolean;
+  shop_settings?: any;
   created_at: string;
 }
 
